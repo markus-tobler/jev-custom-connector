@@ -66,15 +66,34 @@ Only HTTPS URLs are accepted. Authenticate first with `pac auth create --environ
 3. Stamps the version as `major.minor.(build + run number).attempt`.
 4. Uploads the managed and unmanaged packages as an artifact.
 
-## Live verification checklist
+## Live verification
 
-These checks need a DEV environment and a TypeSafe API key, so they cannot run offline:
+### Verified on DEV (`mto-training-management`, 2026-10-03)
 
-- [ ] Import succeeds and the connector appears as **TypeSafe Jev v1** in the solution.
-- [ ] Create a connection with the key, both with and without a `Bearer ` prefix.
-- [ ] Power Automate: add **Evaluate with Jev** in Builder mode with noul, choice, and score rows. Confirm that dynamic tokens appear for each question and option. This shows that the nested `body/definition` reference resolves for `x-ms-dynamic-properties`.
+| Check | Result |
+| --- | --- |
+| `Push-ToDevelopment.ps1` import and publish | Passed |
+| `Sync-FromDevelopment.ps1` round trip | Passed. Only platform normalization changed: BOMs, the lowercased publisher name, and the re-encoded icon. |
+| Connection with a plain key and with a `Bearer `-prefixed key | Both connected, and both called TypeSafe successfully. |
+| Wrong key | TypeSafe's 401 `authentication_error` was passed through unchanged. |
+| `ListModels`, `GetModelChoices` (`/_connector/model-choices`) | 200 |
+| `GetOutputSchema`, using the full body or the `definition` only | 200 with identical schemas. Works even when the key is invalid, so no outbound call is made. |
+| `Evaluate` in Builder mode | 200. The live response matches the generated schema exactly. `x-typesafe-request-id` is returned. |
+| `Evaluate` in JSON mode with a JSON state | 200 |
+| `EvaluateJson` | 200. `responseJson` parses. |
+| Invalid definition (duplicate question ID) | 400 `duplicate_question_id`. The schema endpoint falls back to the generic schema. |
+| Power Automate flow: Button trigger, then Evaluate, then Compose of `answers.is_urgent.noul`, `category.choice`, `severity.score` | Run succeeded: `0.97`, `engineering`, `3.0` |
+
+To reproduce these checks:
+
+1. Get tokens with Azure CLI for the DEV tenant.
+2. Create a connection with `PUT https://api.powerapps.com/providers/Microsoft.PowerApps/apis/<api>/connections/<name>`.
+3. Call `<primaryRuntimeUrl><connection>/<path>` with a token for the `https://apihub.azure.com` audience. Leave out the `/v1` base path, for example `/systemone` or `/_connector/output-schema`.
+
+### Still requires a manual designer check
+
+The designer resolves the dynamic schema client-side, so you need to check it in the browser:
+
+- [ ] In the Power Automate designer, add **Evaluate with Jev** in Builder mode with noul, choice, and score rows. Confirm that dynamic tokens appear for each question and option. This shows that the nested `body/definition` reference resolves for `x-ms-dynamic-properties`.
 - [ ] Switch to JSON mode and confirm the tokens refresh.
-- [ ] The model picker lists the aliases and pinned versions.
-- [ ] Run the flow and confirm the outputs are populated. Then try a wrong key (401) and an invalid definition (400 with `error.code`).
 - [ ] Power Apps: call `EvaluateJson` and parse the result with `ParseJSON`.
-- [ ] **List models** returns data.

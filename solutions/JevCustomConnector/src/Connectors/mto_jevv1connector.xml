@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Connector xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <connectorid>311b9a1b-29de-4656-bf3f-ca13db64e7bb</connectorid>
   <description>Evaluate text or JSON with TypeSafe's Jev System One model and get typed answers to yes/no, choice, and score questions.</description>

@@ -1,6 +1,6 @@
 # jev-custom-connector
 
-A Power Platform custom connector for [TypeSafe](https://typesafe.ai)'s **Jev System One** model. It ships as the solution `JevCustomConnector` (publisher `MarkusTobler`, prefix `mto`) and contains one connector, **TypeSafe Jev v1**.
+A Power Platform custom connector for [TypeSafe](https://typesafe.ai)'s **Jev System One** model. It ships as the solution `JevCustomConnector` (publisher `markustobler`, prefix `mto`) and contains one connector, **TypeSafe Jev v1**.
 
 Jev answers structured questions about a piece of text and returns calibrated probabilities. In this connector, the question definition you enter in a flow also determines the shape of the action's output. Power Automate then shows a dynamic-content token for each question, such as `is_urgent yes probability` or `category probability billing`. The connector's custom C# code generates that output schema without calling TypeSafe.
 
