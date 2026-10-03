@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Connector xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <connectorid>311b9a1b-29de-4656-bf3f-ca13db64e7bb</connectorid>
+  <description>Evaluate text or JSON with TypeSafe's Jev System One model and get typed answers to yes/no, choice, and score questions.</description>
+  <displayname>TypeSafe Jev v1</displayname>
+  <iconbrandcolor>#1f4e79</iconbrandcolor>
+  <name>mto_jevv1connector</name>
+  <connectortype>1</connectortype>
+  <scriptoperations>["Evaluate","EvaluateJson","GetOutputSchema","ListModels","GetModelChoices"]</scriptoperations>
+  <openapidefinition>/Connector/mto_jevv1connector_openapidefinition.json</openapidefinition>
+  <connectionparameters>/Connector/mto_jevv1connector_connectionparameters.json</connectionparameters>
+  <policytemplateinstances>/Connector/mto_jevv1connector_policytemplateinstances.json</policytemplateinstances>
+  <customcodeblobcontent>/Connector/mto_jevv1connector_customcodeblobcontent.csx</customcodeblobcontent>
+  <iconblob>/Connector/mto_jevv1connector_iconblob.Png</iconblob>
+</Connector>

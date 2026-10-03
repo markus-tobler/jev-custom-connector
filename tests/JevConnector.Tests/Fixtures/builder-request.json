@@ -1,0 +1,33 @@
+{
+  "state": "Hi team, the checkout page has been down since 9am and customers cannot pay.",
+  "stateFormat": "Text",
+  "model": "jev-1.13.0",
+  "definition": {
+    "mode": "Builder",
+    "questions": [
+      {
+        "id": "is_urgent",
+        "type": "noul",
+        "instructions": "Does this message need an immediate response?",
+        "noulTrue": "Production impact or a hard deadline today.",
+        "noulFalse": ""
+      },
+      {
+        "id": "category",
+        "type": "choice",
+        "instructions": "Which team should handle this?",
+        "choiceOptions": [
+          { "key": "billing", "description": "Payments, invoices, refunds." },
+          { "key": "engineering", "description": "Outages and bugs." },
+          { "key": "other" }
+        ]
+      },
+      {
+        "id": "severity",
+        "type": "score",
+        "instructions": "How severe is the reported problem?",
+        "scoreLevels": [ "No impact", "Minor inconvenience", "Feature broken", "Revenue-impacting outage" ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "api_key": {
+    "type": "securestring",
+    "uiDefinition": {
+      "displayName": "TypeSafe API key",
+      "description": "Your TypeSafe API key. Create one in the TypeSafe console.",
+      "tooltip": "Paste the API key. The connector sends it as a bearer token in the Authorization header; the Bearer prefix is optional.",
+      "constraints": {
+        "tabIndex": 2,
+        "clearText": false,
+        "required": "true"
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "model": "jev-1.13.0",
+  "answers": {
+    "is_urgent": { "type": "noul", "noul": 0.97 },
+    "category": {
+      "type": "choice",
+      "choice": "engineering",
+      "probabilities": { "billing": 0.08, "engineering": 0.9, "other": 0.02 },
+      "confidence": 0.9
+    },
+    "severity": {
+      "type": "score",
+      "score": 2.84,
+      "legend": { "0": "No impact", "1": "Minor inconvenience", "2": "Feature broken", "3": "Revenue-impacting outage" },
+      "probabilities": { "0": 0.0, "1": 0.02, "2": 0.12, "3": 0.86 },
+      "confidence": 0.86
+    }
+  },
+  "usage": { "input_tokens": 182, "output_tokens": 12 }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "jev-custom-connector",
+  "private": true,
+  "description": "Tooling for the TypeSafe Jev v1 Power Platform custom connector.",
+  "license": "MIT",
+  "scripts": {
+    "validate:openapi": "swagger-cli validate solutions/JevCustomConnector/src/Connectors/mto_jevv1connector_openapidefinition.json"
+  },
+  "devDependencies": {
+    "swagger-cli": "4.0.4"
+  }
+}

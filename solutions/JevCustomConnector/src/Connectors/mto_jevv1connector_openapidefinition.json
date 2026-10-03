@@ -1,0 +1,420 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "TypeSafe Jev v1",
+    "description": "Evaluate text or JSON against yes/no, choice, and score questions with TypeSafe's Jev System One model. Answers are exposed as named, typed outputs that the connector derives from your questions.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "TypeSafe API documentation",
+      "url": "https://docs.typesafe.ai/api"
+    }
+  },
+  "host": "api.typesafe.ai",
+  "basePath": "/v1",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/systemone": {
+      "post": {
+        "operationId": "Evaluate",
+        "summary": "Evaluate with Jev",
+        "description": "Sends a state and a set of questions to Jev System One and returns typed answers. The output fields are generated from the question definition.",
+        "x-ms-visibility": "important",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/EvaluateRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Answers keyed by question ID.",
+            "schema": {
+              "x-ms-dynamic-schema": {
+                "operationId": "GetOutputSchema",
+                "parameters": {
+                  "body": {
+                    "parameter": "body"
+                  }
+                },
+                "value-path": "schema"
+              },
+              "x-ms-dynamic-properties": {
+                "operationId": "GetOutputSchema",
+                "parameters": {
+                  "body/definition": {
+                    "parameterReference": "body/definition"
+                  }
+                },
+                "itemValuePath": "schema"
+              }
+            }
+          },
+          "default": {
+            "description": "The request failed. The body contains the TypeSafe or connector error."
+          }
+        }
+      }
+    },
+    "/_connector/evaluate-json": {
+      "post": {
+        "operationId": "EvaluateJson",
+        "summary": "Evaluate with Jev (JSON text)",
+        "description": "Runs the same evaluation and returns the native TypeSafe response as JSON text. Use it in Power Apps with ParseJSON.",
+        "x-ms-visibility": "advanced",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/EvaluateRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The native TypeSafe response serialized as JSON text.",
+            "schema": {
+              "$ref": "#/definitions/EvaluateJsonResponse"
+            }
+          },
+          "default": {
+            "description": "The request failed. The body contains the TypeSafe or connector error."
+          }
+        }
+      }
+    },
+    "/_connector/output-schema": {
+      "post": {
+        "operationId": "GetOutputSchema",
+        "summary": "Get output schema",
+        "description": "Builds the answer schema for a question definition inside the connector. No request is sent to TypeSafe.",
+        "x-ms-visibility": "internal",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OutputSchemaRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The generated JSON schema.",
+            "schema": {
+              "$ref": "#/definitions/OutputSchemaResponse"
+            }
+          }
+        }
+      }
+    },
+    "/models": {
+      "get": {
+        "operationId": "ListModels",
+        "summary": "List models",
+        "description": "Lists the Jev models available to your API key.",
+        "x-ms-visibility": "advanced",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Available models.",
+            "schema": {
+              "$ref": "#/definitions/ModelsResponse"
+            }
+          },
+          "default": {
+            "description": "The request failed. The body contains the TypeSafe error."
+          }
+        }
+      }
+    },
+    "/_connector/model-choices": {
+      "get": {
+        "operationId": "GetModelChoices",
+        "summary": "Get model choices",
+        "description": "Lists model aliases and released models for the model picker.",
+        "x-ms-visibility": "internal",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Model choices.",
+            "schema": {
+              "$ref": "#/definitions/ModelChoicesResponse"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "EvaluateRequest": {
+      "type": "object",
+      "required": [
+        "state",
+        "definition"
+      ],
+      "properties": {
+        "state": {
+          "type": "string",
+          "x-ms-summary": "State",
+          "description": "The text or JSON to evaluate.",
+          "x-ms-visibility": "important"
+        },
+        "stateFormat": {
+          "type": "string",
+          "x-ms-summary": "State format",
+          "description": "Text sends the state as a string. JSON parses the state and sends it as a JSON object or array.",
+          "enum": [
+            "Text",
+            "JSON"
+          ],
+          "default": "Text",
+          "x-ms-visibility": "advanced"
+        },
+        "model": {
+          "type": "string",
+          "x-ms-summary": "Model",
+          "description": "Model alias or pinned version, for example jev-latest, jev-preview, or jev-1.13.0.",
+          "default": "jev-latest",
+          "x-ms-visibility": "advanced",
+          "x-ms-dynamic-values": {
+            "operationId": "GetModelChoices",
+            "parameters": {},
+            "value-collection": "models",
+            "value-path": "name",
+            "value-title": "title"
+          },
+          "x-ms-dynamic-list": {
+            "operationId": "GetModelChoices",
+            "parameters": {},
+            "itemsPath": "models",
+            "itemValuePath": "name",
+            "itemTitlePath": "title"
+          }
+        },
+        "definition": {
+          "$ref": "#/definitions/QuestionDefinition"
+        }
+      }
+    },
+    "QuestionDefinition": {
+      "type": "object",
+      "x-ms-summary": "Questions",
+      "description": "The questions to answer, defined with the builder or as native TypeSafe JSON.",
+      "required": [
+        "mode"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "x-ms-summary": "Definition mode",
+          "description": "Builder uses the question rows. JSON uses the native TypeSafe questions object.",
+          "enum": [
+            "Builder",
+            "JSON"
+          ],
+          "default": "Builder",
+          "x-ms-visibility": "important"
+        },
+        "questions": {
+          "type": "array",
+          "x-ms-summary": "Questions",
+          "description": "Question rows used in Builder mode.",
+          "x-ms-visibility": "important",
+          "items": {
+            "$ref": "#/definitions/QuestionRow"
+          }
+        },
+        "questionsJson": {
+          "type": "string",
+          "x-ms-summary": "Questions JSON",
+          "description": "Native TypeSafe questions object keyed by question ID, used in JSON mode. Example: {\"is_urgent\":{\"type\":\"noul\",\"instructions\":\"Is this urgent?\"}}",
+          "x-ms-visibility": "advanced"
+        }
+      }
+    },
+    "QuestionRow": {
+      "type": "object",
+      "required": [
+        "id",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "x-ms-summary": "Question ID",
+          "description": "Unique key for the answer, for example is_urgent."
+        },
+        "type": {
+          "type": "string",
+          "x-ms-summary": "Question type",
+          "description": "noul answers yes or no with a probability, choice selects one option, and score rates against ordered levels.",
+          "enum": [
+            "noul",
+            "choice",
+            "score"
+          ],
+          "default": "noul"
+        },
+        "instructions": {
+          "type": "string",
+          "x-ms-summary": "Instructions",
+          "description": "The question to ask about the state."
+        },
+        "noulTrue": {
+          "type": "string",
+          "x-ms-summary": "Noul: yes means",
+          "description": "Optional description of a yes answer. Used for noul questions."
+        },
+        "noulFalse": {
+          "type": "string",
+          "x-ms-summary": "Noul: no means",
+          "description": "Optional description of a no answer. Used for noul questions."
+        },
+        "choiceOptions": {
+          "type": "array",
+          "x-ms-summary": "Choice options",
+          "description": "Options for choice questions, up to 255.",
+          "items": {
+            "$ref": "#/definitions/ChoiceOption"
+          }
+        },
+        "scoreLevels": {
+          "type": "array",
+          "x-ms-summary": "Score levels",
+          "description": "Ordered level descriptions for score questions, from score 0 upward. Provide 2 to 10 levels.",
+          "items": {
+            "type": "string",
+            "x-ms-summary": "Level description"
+          }
+        }
+      }
+    },
+    "ChoiceOption": {
+      "type": "object",
+      "required": [
+        "key"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "x-ms-summary": "Option key",
+          "description": "The value returned when this option is chosen."
+        },
+        "description": {
+          "type": "string",
+          "x-ms-summary": "Option description",
+          "description": "Optional description of when to choose this option."
+        }
+      }
+    },
+    "EvaluateJsonResponse": {
+      "type": "object",
+      "properties": {
+        "responseJson": {
+          "type": "string",
+          "x-ms-summary": "Response JSON",
+          "description": "The native TypeSafe response with model, answers, and usage, as JSON text."
+        }
+      }
+    },
+    "OutputSchemaRequest": {
+      "type": "object",
+      "properties": {
+        "definition": {
+          "$ref": "#/definitions/QuestionDefinition"
+        }
+      }
+    },
+    "OutputSchemaResponse": {
+      "type": "object",
+      "properties": {
+        "schema": {
+          "type": "object",
+          "x-ms-summary": "Schema",
+          "description": "JSON schema of the evaluation response."
+        }
+      }
+    },
+    "ModelsResponse": {
+      "type": "object",
+      "properties": {
+        "models": {
+          "type": "array",
+          "x-ms-summary": "Models",
+          "items": {
+            "$ref": "#/definitions/ModelCard"
+          }
+        }
+      }
+    },
+    "ModelCard": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-ms-summary": "Model name",
+          "description": "Model identifier."
+        },
+        "description": {
+          "type": "string",
+          "x-ms-summary": "Model description",
+          "description": "Model description."
+        },
+        "release_date": {
+          "type": "string",
+          "x-ms-summary": "Release date",
+          "description": "Model release date."
+        }
+      }
+    },
+    "ModelChoicesResponse": {
+      "type": "object",
+      "properties": {
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "parameters": {},
+  "responses": {},
+  "securityDefinitions": {
+    "api_key": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "Authorization"
+    }
+  },
+  "security": [
+    {
+      "api_key": []
+    }
+  ],
+  "tags": []
+}

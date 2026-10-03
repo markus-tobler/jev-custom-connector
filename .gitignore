@@ -1,0 +1,12 @@
+# Local configuration and secrets
+.env
+
+# Build output
+artifacts/
+bin/
+obj/
+*.binlog
+TestResults/
+
+# Node tooling
+node_modules/

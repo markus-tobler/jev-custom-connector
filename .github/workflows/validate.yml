@@ -1,0 +1,70 @@
+name: Validate and build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Validate, test, and package
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Node tooling
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Power Platform tools
+        uses: microsoft/powerplatform-actions/actions-install@v1
+        with:
+          add-tools-to-path: true
+
+      - name: Validate solution source
+        shell: pwsh
+        run: ./scripts/Validate-Solution.ps1 -SkipPack
+
+      - name: Determine build version
+        id: version
+        shell: pwsh
+        run: |
+          [xml]$manifest = Get-Content ./solutions/JevCustomConnector/src/Other/Solution.xml -Raw
+          $sourceVersion = [version]$manifest.ImportExportXml.SolutionManifest.Version
+          $buildVersion = "{0}.{1}.{2}.{3}" -f $sourceVersion.Major, $sourceVersion.Minor, ($sourceVersion.Build + [int]$env:GITHUB_RUN_NUMBER), $env:GITHUB_RUN_ATTEMPT
+          "value=$buildVersion" >> $env:GITHUB_OUTPUT
+          "Packaging solution version $buildVersion"
+
+      - name: Build managed and unmanaged packages
+        shell: pwsh
+        run: ./scripts/Build-Solution.ps1 -PackageType Both -Version '${{ steps.version.outputs.value }}'
+
+      - name: Upload solution packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: JevCustomConnector-${{ steps.version.outputs.value }}
+          path: artifacts/*.zip
+          if-no-files-found: error
+          retention-days: 30
