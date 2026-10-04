@@ -82,7 +82,7 @@ jobs:
 
     steps:
       - name: Download solution packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: JevCustomConnector-${{ needs.build.outputs.version }}
           path: artifacts
