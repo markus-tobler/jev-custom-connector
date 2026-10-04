@@ -28,3 +28,15 @@ Jev complements rather than replaces prompts and frontier models:
 See the [usage guide](docs/usage.md) for a detailed Power Automate example, question types, input schemas, dynamic outputs, and error handling.
 
 See the [development guide](docs/development.md) to build, test, import, and maintain the connector.
+
+## Contributing and security
+
+Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). To report a vulnerability, follow [SECURITY.md](SECURITY.md) instead of opening a public issue.
+
+## Disclaimer
+
+This is an independent community project. It is not affiliated with, endorsed by, or supported by TypeSafe AI or Microsoft. TypeSafe, Jev, Microsoft, Power Platform, Power Automate, and Copilot Studio are trademarks of their respective owners. Use of the TypeSafe API is subject to TypeSafe's own terms.
+
+## License
+
+[MIT](LICENSE)

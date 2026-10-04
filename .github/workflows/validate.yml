@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: validate-${{ github.ref }}
@@ -19,6 +19,8 @@ jobs:
     name: Validate, test, and package
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      version: ${{ steps.version.outputs.value }}
 
     steps:
       - name: Check out source
@@ -69,22 +71,37 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  release:
+    name: Publish GitHub release
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download solution packages
+        uses: actions/download-artifact@v4
+        with:
+          name: JevCustomConnector-${{ needs.build.outputs.version }}
+          path: artifacts
+
       - name: Prepare versioned managed solution
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         shell: pwsh
         run: |
           $managed = Get-ChildItem ./artifacts -Filter '*_managed.zip' | Select-Object -First 1
           if (-not $managed) { throw 'Managed solution zip not found in artifacts.' }
-          $name = "JevCustomConnector_${{ steps.version.outputs.value }}_managed.zip"
+          $name = "JevCustomConnector_${{ needs.build.outputs.version }}_managed.zip"
           New-Item -ItemType Directory -Force release | Out-Null
           Copy-Item $managed.FullName (Join-Path release $name)
 
       - name: Create GitHub release
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "v${{ steps.version.outputs.value }}" release/*.zip \
+          gh release create "v${{ needs.build.outputs.version }}" release/*.zip \
+            --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "JevCustomConnector ${{ steps.version.outputs.value }}" \
+            --title "JevCustomConnector ${{ needs.build.outputs.version }}" \
             --generate-notes

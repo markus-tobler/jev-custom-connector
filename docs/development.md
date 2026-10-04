@@ -70,9 +70,11 @@ Only HTTPS URLs are accepted. Authenticate first with `pac auth create --environ
 3. Stamps the version as `major.minor.(build + run number).attempt`.
 4. Uploads the managed and unmanaged packages as an artifact.
 
+On pushes to `main`, a separate `release` job publishes the managed package as a GitHub release. Only that job has write access to repository contents; pull request runs are read-only.
+
 ## Live verification
 
-### Verified on DEV (`mto-training-management`, 2026-10-03)
+### Verified on a DEV environment (2026-10-03)
 
 | Check | Result |
 | --- | --- |
@@ -90,7 +92,7 @@ Only HTTPS URLs are accepted. Authenticate first with `pac auth create --environ
 
 To reproduce these checks:
 
-1. Get tokens with Azure CLI for the DEV tenant.
+1. Get tokens with Azure CLI for the tenant that hosts your DEV environment.
 2. Create a connection with `PUT https://api.powerapps.com/providers/Microsoft.PowerApps/apis/<api>/connections/<name>`.
 3. Call `<primaryRuntimeUrl><connection>/<path>` with a token for the `https://apihub.azure.com` audience. Leave out the `/v1` base path, for example `/systemone` or `/_connector/output-schema`.
 
