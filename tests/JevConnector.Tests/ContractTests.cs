@@ -37,18 +37,24 @@ public class ContractTests
         var schema = Operation("Evaluate")["responses"]["200"]["schema"];
 
         Assert.Equal("GetOutputSchema", (string)schema["x-ms-dynamic-schema"]["operationId"]);
-        Assert.Equal("body", (string)schema["x-ms-dynamic-schema"]["parameters"]["body"]["parameter"]);
+        Assert.Equal("questions", (string)schema["x-ms-dynamic-schema"]["parameters"]["questions"]["parameter"]);
         Assert.Equal("schema", (string)schema["x-ms-dynamic-schema"]["value-path"]);
         Assert.Equal("GetOutputSchema", (string)schema["x-ms-dynamic-properties"]["operationId"]);
-        Assert.Equal("body/definition", (string)schema["x-ms-dynamic-properties"]["parameters"]["body/definition"]["parameterReference"]);
+        // The designer flattens object parameters into their leaves, so the reference must target a leaf
+        // (here the questions array); referencing an object such as body/definition fails to resolve.
+        Assert.Equal("body/questions", (string)schema["x-ms-dynamic-properties"]["parameters"]["body/questions"]["parameterReference"]);
         Assert.Equal("schema", (string)schema["x-ms-dynamic-properties"]["itemValuePath"]);
 
         var schemaOperation = Operation("GetOutputSchema");
         Assert.Equal("internal", (string)schemaOperation["x-ms-visibility"]);
         Assert.Equal("body", (string)schemaOperation["parameters"][0]["name"]);
         Assert.Equal("#/definitions/OutputSchemaRequest", (string)schemaOperation["parameters"][0]["schema"]["$ref"]);
-        Assert.NotNull(Swagger["definitions"]["OutputSchemaRequest"]["properties"]["definition"]);
-        Assert.NotNull(Swagger["definitions"]["EvaluateRequest"]["properties"]["definition"]);
+        Assert.Equal("array", (string)Swagger["definitions"]["OutputSchemaRequest"]["properties"]["questions"]["type"]);
+        Assert.Equal("array", (string)Swagger["definitions"]["EvaluateRequest"]["properties"]["questions"]["type"]);
+        var option = (JObject)Swagger["definitions"]["ChoiceOption"]["properties"];
+        Assert.Null(option["key"]); // The designer's array editor hides item properties named "key".
+        Assert.NotNull(option["option"]);
+        Assert.Equal(new[] { "state", "model", "questions" }, ((JObject)Swagger["definitions"]["EvaluateRequest"]["properties"]).Properties().Select(p => p.Name));
     }
 
     [Fact]

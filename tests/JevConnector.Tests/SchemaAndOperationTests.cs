@@ -24,11 +24,60 @@ public class SchemaTests
 
         Assert.Equal(new[] { "is_urgent", "category", "severity" }, ((JObject)answers).Properties().Select(p => p.Name));
         Assert.Equal("number", (string)answers["is_urgent"]["properties"]["noul"]["type"]);
-        Assert.Equal("is_urgent yes probability", (string)answers["is_urgent"]["properties"]["noul"]["x-ms-summary"]);
         Assert.Equal(new[] { "billing", "engineering", "other" }, ((JObject)answers["category"]["properties"]["probabilities"]["properties"]).Properties().Select(p => p.Name));
         Assert.Equal(new[] { "0", "1", "2", "3" }, ((JObject)answers["severity"]["properties"]["legend"]["properties"]).Properties().Select(p => p.Name));
         Assert.Equal("string", (string)answers["severity"]["properties"]["legend"]["properties"]["3"]["type"]);
         Assert.Equal("integer", (string)schema["properties"]["usage"]["properties"]["input_tokens"]["type"]);
+    }
+
+    [Fact]
+    public async Task Designer_token_names_do_not_repeat_words()
+    {
+        var schema = await GetSchemaAsync(Harness.Fixture("builder-request.json"));
+
+        var names = DesignerTokenNames(schema, null).ToDictionary(t => t.Path, t => t.Name);
+
+        Assert.Equal("Model", names["model"]);
+        Assert.Equal("Input tokens", names["usage.input_tokens"]);
+        Assert.Equal("is_urgent", names["answers.is_urgent"]);
+        Assert.Equal("is_urgent type", names["answers.is_urgent.type"]);
+        Assert.Equal("is_urgent yes probability", names["answers.is_urgent.noul"]);
+        Assert.Equal("category choice", names["answers.category.choice"]);
+        Assert.Equal("category confidence", names["answers.category.confidence"]);
+        Assert.Equal("category probability", names["answers.category.probabilities"]);
+        Assert.Equal("category probability billing", names["answers.category.probabilities.billing"]);
+        Assert.Equal("severity score", names["answers.severity.score"]);
+        Assert.Equal("severity legend 0", names["answers.severity.legend.0"]);
+        Assert.Equal("severity probability 3", names["answers.severity.probabilities.3"]);
+        foreach (var name in names.Values.Where(n => n.Length > 0))
+        {
+            var words = name.Split(' ');
+            Assert.True(words.Distinct().Count() == words.Length, "Repeated word in token name: " + name);
+        }
+    }
+
+    // Mirrors SchemaProcessor in Azure/LogicAppsUX: a token's summary is the x-ms-summary of every
+    // enclosing object joined with its own x-ms-summary.
+    private static IEnumerable<(string Path, string Name)> DesignerTokenNames(JToken schema, string summaryPrefix, string path = "")
+    {
+        var properties = schema["properties"] as JObject;
+        if (properties == null)
+        {
+            yield break;
+        }
+
+        foreach (var property in properties.Properties())
+        {
+            var summary = (string)property.Value["x-ms-summary"];
+            var name = string.IsNullOrEmpty(summaryPrefix) ? summary ?? string.Empty : summary == null ? string.Empty : summaryPrefix + " " + summary;
+            var childPath = path.Length == 0 ? property.Name : path + "." + property.Name;
+            yield return (childPath, name);
+            var childPrefix = string.IsNullOrEmpty(summaryPrefix) ? summary : summary == null ? summaryPrefix : summaryPrefix + " " + summary;
+            foreach (var child in DesignerTokenNames(property.Value, childPrefix, childPath))
+            {
+                yield return child;
+            }
+        }
     }
 
     [Fact]
@@ -40,19 +89,17 @@ public class SchemaTests
     }
 
     [Fact]
-    public async Task Definition_only_body_and_whole_request_body_produce_same_schema()
+    public async Task Questions_only_body_and_whole_request_body_produce_same_schema()
     {
         var request = JObject.Parse(Harness.Fixture("builder-request.json"));
         var fromWholeBody = await GetSchemaAsync(request.ToString());
-        var fromDefinition = await GetSchemaAsync(new JObject { ["definition"] = request["definition"] }.ToString());
-        var fromBareDefinition = await GetSchemaAsync(request["definition"].ToString());
+        var fromQuestions = await GetSchemaAsync(new JObject { ["questions"] = request["questions"] }.ToString());
 
-        Assert.True(JToken.DeepEquals(fromWholeBody, fromDefinition));
-        Assert.True(JToken.DeepEquals(fromWholeBody, fromBareDefinition));
+        Assert.True(JToken.DeepEquals(fromWholeBody, fromQuestions));
     }
 
     [Fact]
-    public async Task Json_mode_schema_handles_structured_legend_and_unusual_keys()
+    public async Task Native_questions_schema_handles_structured_legend_and_unusual_keys()
     {
         var questions = new JObject
         {
@@ -61,7 +108,7 @@ public class SchemaTests
         };
         var schema = await GetSchemaAsync(new JObject
         {
-            ["definition"] = new JObject { ["mode"] = "JSON", ["questionsJson"] = questions.ToString() }
+            ["questions"] = questions.ToString()
         }.ToString());
 
         var answers = (JObject)schema["properties"]["answers"]["properties"];
@@ -76,9 +123,9 @@ public class SchemaTests
     [Theory]
     [InlineData("")]
     [InlineData("{}")]
-    [InlineData("{\"definition\":{\"mode\":\"Builder\",\"questions\":[]}}")]
-    [InlineData("{\"definition\":{\"mode\":\"JSON\",\"questionsJson\":\"@{variables('questions')}\"}}")]
-    [InlineData("{\"definition\":{\"mode\":\"Builder\",\"questions\":[{\"id\":\"a\",\"type\":\"score\",\"scoreLevels\":[\"x\"]}]}}")]
+    [InlineData("{\"questions\":[]}")]
+    [InlineData("{\"questions\":\"@{variables('questions')}\"}")]
+    [InlineData("{\"questions\":[{\"id\":\"a\",\"type\":\"score\",\"levels\":[\"x\"]}]}")]
     public async Task Unresolvable_definitions_return_generic_schema(string body)
     {
         var schema = await GetSchemaAsync(body);

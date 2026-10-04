@@ -25,7 +25,7 @@
       "post": {
         "operationId": "Evaluate",
         "summary": "Evaluate with Jev",
-        "description": "Sends a state and a set of questions to Jev System One and returns typed answers. The output fields are generated from the question definition.",
+        "description": "Sends a state and a set of questions to Jev System One and returns typed answers. The output fields are generated from the questions.",
         "x-ms-visibility": "important",
         "parameters": [
           {
@@ -44,8 +44,8 @@
               "x-ms-dynamic-schema": {
                 "operationId": "GetOutputSchema",
                 "parameters": {
-                  "body": {
-                    "parameter": "body"
+                  "questions": {
+                    "parameter": "questions"
                   }
                 },
                 "value-path": "schema"
@@ -53,8 +53,8 @@
               "x-ms-dynamic-properties": {
                 "operationId": "GetOutputSchema",
                 "parameters": {
-                  "body/definition": {
-                    "parameterReference": "body/definition"
+                  "body/questions": {
+                    "parameterReference": "body/questions"
                   }
                 },
                 "itemValuePath": "schema"
@@ -165,25 +165,14 @@
       "type": "object",
       "required": [
         "state",
-        "definition"
+        "questions"
       ],
       "properties": {
         "state": {
           "type": "string",
           "x-ms-summary": "State",
-          "description": "The text or JSON to evaluate.",
+          "description": "The text to evaluate. Text that is a JSON object or array is sent as structured JSON, so questions can refer to its fields.",
           "x-ms-visibility": "important"
-        },
-        "stateFormat": {
-          "type": "string",
-          "x-ms-summary": "State format",
-          "description": "Text sends the state as a string. JSON parses the state and sends it as a JSON object or array.",
-          "enum": [
-            "Text",
-            "JSON"
-          ],
-          "default": "Text",
-          "x-ms-visibility": "advanced"
         },
         "model": {
           "type": "string",
@@ -206,44 +195,14 @@
             "itemTitlePath": "title"
           }
         },
-        "definition": {
-          "$ref": "#/definitions/QuestionDefinition"
-        }
-      }
-    },
-    "QuestionDefinition": {
-      "type": "object",
-      "x-ms-summary": "Questions",
-      "description": "The questions to answer, defined with the builder or as native TypeSafe JSON.",
-      "required": [
-        "mode"
-      ],
-      "properties": {
-        "mode": {
-          "type": "string",
-          "x-ms-summary": "Definition mode",
-          "description": "Builder uses the question rows. JSON uses the native TypeSafe questions object.",
-          "enum": [
-            "Builder",
-            "JSON"
-          ],
-          "default": "Builder",
-          "x-ms-visibility": "important"
-        },
         "questions": {
           "type": "array",
           "x-ms-summary": "Questions",
-          "description": "Question rows used in Builder mode.",
+          "description": "One row per question. Switch to the entire-array input to pass the rows, or a native TypeSafe questions object, from an expression.",
           "x-ms-visibility": "important",
           "items": {
             "$ref": "#/definitions/QuestionRow"
           }
-        },
-        "questionsJson": {
-          "type": "string",
-          "x-ms-summary": "Questions JSON",
-          "description": "Native TypeSafe questions object keyed by question ID, used in JSON mode. Example: {\"is_urgent\":{\"type\":\"noul\",\"instructions\":\"Is this urgent?\"}}",
-          "x-ms-visibility": "advanced"
         }
       }
     },
@@ -262,7 +221,7 @@
         "type": {
           "type": "string",
           "x-ms-summary": "Question type",
-          "description": "noul answers yes or no with a probability, choice selects one option, and score rates against ordered levels.",
+          "description": "noul answers yes or no with a probability, choice selects one option, and score rates against ordered levels. Fill in only the fields for the selected type.",
           "enum": [
             "noul",
             "choice",
@@ -278,28 +237,29 @@
         "noulTrue": {
           "type": "string",
           "x-ms-summary": "Noul: yes means",
-          "description": "Optional description of a yes answer. Used for noul questions."
+          "description": "Noul only. Optional description of a yes answer."
         },
         "noulFalse": {
           "type": "string",
           "x-ms-summary": "Noul: no means",
-          "description": "Optional description of a no answer. Used for noul questions."
+          "description": "Noul only. Optional description of a no answer."
         },
-        "choiceOptions": {
+        "options": {
           "type": "array",
           "x-ms-summary": "Choice options",
-          "description": "Options for choice questions, up to 255.",
+          "description": "Choice only. 1 to 255 options with unique keys.",
           "items": {
             "$ref": "#/definitions/ChoiceOption"
           }
         },
-        "scoreLevels": {
+        "levels": {
           "type": "array",
           "x-ms-summary": "Score levels",
-          "description": "Ordered level descriptions for score questions, from score 0 upward. Provide 2 to 10 levels.",
+          "description": "Score only. 2 to 10 ordered level descriptions, starting with score 0.",
           "items": {
             "type": "string",
-            "x-ms-summary": "Level description"
+            "x-ms-summary": "Level",
+            "description": "Description of this score level."
           }
         }
       }
@@ -307,13 +267,13 @@
     "ChoiceOption": {
       "type": "object",
       "required": [
-        "key"
+        "option"
       ],
       "properties": {
-        "key": {
+        "option": {
           "type": "string",
           "x-ms-summary": "Option key",
-          "description": "The value returned when this option is chosen."
+          "description": "The value returned when this option is chosen, for example billing."
         },
         "description": {
           "type": "string",
@@ -335,8 +295,12 @@
     "OutputSchemaRequest": {
       "type": "object",
       "properties": {
-        "definition": {
-          "$ref": "#/definitions/QuestionDefinition"
+        "questions": {
+          "type": "array",
+          "x-ms-summary": "Questions",
+          "items": {
+            "$ref": "#/definitions/QuestionRow"
+          }
         }
       }
     },

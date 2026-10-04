@@ -93,7 +93,7 @@ public class EvaluateTests
     }
 
     [Fact]
-    public async Task Json_mode_preserves_structured_native_questions()
+    public async Task Native_questions_object_and_json_state_are_preserved()
     {
         var questions = new JObject
         {
@@ -107,33 +107,60 @@ public class EvaluateTests
             ["ok"] = new JObject { ["type"] = "noul" },
             ["rubric"] = new JObject { ["type"] = "score", ["instructions"] = null, ["criteria"] = new JArray(null, new JObject { ["level"] = 1 }) }
         };
-        var request = new JObject
+
+        foreach (var questionsValue in new JToken[] { questions, questions.ToString() })
         {
-            ["state"] = "{\"order\":{\"id\":7,\"total\":12.50}}",
-            ["stateFormat"] = "JSON",
-            ["definition"] = new JObject { ["mode"] = "JSON", ["questionsJson"] = questions.ToString() }
-        };
+            var request = new JObject
+            {
+                ["state"] = "  {\"order\":{\"id\":7,\"total\":12.50}}\n",
+                ["questions"] = questionsValue
+            };
 
-        var (_, context) = await Harness.RunAsync("Evaluate", HttpMethod.Post, "/systemone", request.ToString(), Ok);
+            var (_, context) = await Harness.RunAsync("Evaluate", HttpMethod.Post, "/systemone", request.ToString(), Ok);
 
-        var body = Assert.Single(context.Sent).Body;
-        var payload = JObject.Parse(body);
-        Assert.True(JToken.DeepEquals(questions, payload["questions"]), payload.ToString());
-        Assert.Equal(JTokenType.Object, payload["state"].Type);
-        Assert.Contains("\"total\":12.50", body);
-        Assert.Equal("jev-latest", (string)payload["model"]);
+            var body = Assert.Single(context.Sent).Body;
+            var payload = JObject.Parse(body);
+            Assert.True(JToken.DeepEquals(questions, payload["questions"]), payload.ToString());
+            Assert.Equal(JTokenType.Object, payload["state"].Type);
+            Assert.Contains("\"total\":12.50", body);
+            Assert.Equal("jev-latest", (string)payload["model"]);
+        }
     }
 
     [Fact]
-    public async Task Text_state_is_sent_as_string_even_if_it_looks_like_json()
+    public async Task Question_rows_can_be_passed_as_json_text()
     {
         var body = JObject.Parse(Harness.Fixture("builder-request.json"));
-        body["state"] = "{\"a\":1}";
-        body.Remove("stateFormat");
+        body["questions"] = body["questions"].ToString();
 
         var (_, context) = await Harness.RunAsync("Evaluate", HttpMethod.Post, "/systemone", body.ToString(), Ok);
 
-        Assert.Equal(JTokenType.String, JObject.Parse(Assert.Single(context.Sent).Body)["state"].Type);
+        var payload = JObject.Parse(Assert.Single(context.Sent).Body);
+        Assert.True(JToken.DeepEquals(JObject.Parse(Harness.Fixture("builder-expected-payload.json"))["questions"], payload["questions"]), payload.ToString());
+    }
+
+    [Theory]
+    [InlineData("{\"a\":1}", JTokenType.Object)]
+    [InlineData("[1, 2]", JTokenType.Array)]
+    [InlineData("{not json", JTokenType.String)]
+    [InlineData("{\"a\":1} trailing", JTokenType.String)]
+    [InlineData("42", JTokenType.String)]
+    [InlineData("true", JTokenType.String)]
+    [InlineData("\"quoted\"", JTokenType.String)]
+    [InlineData("[urgent] server down", JTokenType.String)]
+    public async Task State_text_is_sent_as_json_only_for_objects_and_arrays(string state, JTokenType expected)
+    {
+        var body = JObject.Parse(Harness.Fixture("builder-request.json"));
+        body["state"] = state;
+
+        var (_, context) = await Harness.RunAsync("Evaluate", HttpMethod.Post, "/systemone", body.ToString(), Ok);
+
+        var sentState = JObject.Parse(Assert.Single(context.Sent).Body)["state"];
+        Assert.Equal(expected, sentState.Type);
+        if (expected == JTokenType.String)
+        {
+            Assert.Equal(state, (string)sentState);
+        }
     }
 
     [Fact]
@@ -143,7 +170,7 @@ public class EvaluateTests
         {
             ["state"] = new JArray(new JObject { ["role"] = "user", ["text"] = "hi" }),
             ["model"] = "  ",
-            ["definition"] = new JObject { ["questionsJson"] = new JObject { ["greeting"] = new JObject { ["type"] = "noul", ["instructions"] = "Is it a greeting?" } } }
+            ["questions"] = new JObject { ["greeting"] = new JObject { ["type"] = "noul", ["instructions"] = "Is it a greeting?" } }
         };
 
         var (_, context) = await Harness.RunAsync("Evaluate", HttpMethod.Post, "/systemone", body.ToString(), Ok);
@@ -172,13 +199,13 @@ public class EvaluateTests
         static string Builder(params JObject[] rows) => new JObject
         {
             ["state"] = "s",
-            ["definition"] = new JObject { ["mode"] = "Builder", ["questions"] = new JArray(rows) }
+            ["questions"] = new JArray(rows)
         }.ToString();
 
         static string NativeJson(string questionsJson) => new JObject
         {
             ["state"] = "s",
-            ["definition"] = new JObject { ["mode"] = "JSON", ["questionsJson"] = questionsJson }
+            ["questions"] = questionsJson
         }.ToString();
 
         static JObject Row(string id, string type) => new() { ["id"] = id, ["type"] = type };
@@ -193,43 +220,49 @@ public class EvaluateTests
         {
             { "", "missing_body", null },
             { "[1]", "invalid_body", null },
-            { "{\"definition\":{}}", "missing_state", "state" },
-            { "{\"state\":\"{oops\",\"stateFormat\":\"JSON\",\"definition\":{}}", "invalid_state_json", "state" },
-            { "{\"state\":\"s\",\"stateFormat\":\"XML\",\"definition\":{}}", "invalid_state_format", "stateFormat" },
-            { "{\"state\":5,\"definition\":{}}", "invalid_state", "state" },
-            { "{\"state\":\"s\",\"model\":1,\"definition\":{}}", "invalid_model", "model" },
-            { "{\"state\":\"s\"}", "missing_definition", "definition" },
-            { "{\"state\":\"s\",\"definition\":{\"mode\":\"YAML\"}}", "invalid_mode", "definition.mode" },
-            { Builder(), "missing_questions", "definition.questions" },
-            { Builder(Row("a", "noul"), Row("a", "noul")), "duplicate_question_id", "definition.questions[1].id" },
-            { Builder(Row(" ", "noul")), "missing_question_id", "definition.questions[0].id" },
-            { Builder(Row("a", "rank")), "invalid_question_type", "definition.questions[0].type" },
-            { Builder(Row("a", "choice")), "missing_choice_options", "definition.questions[0].choiceOptions" },
+            { "{\"questions\":[]}", "missing_state", "state" },
+            { "{\"state\":5,\"questions\":[]}", "invalid_state", "state" },
+            { "{\"state\":\"s\",\"model\":1,\"questions\":[]}", "invalid_model", "model" },
+            { "{\"state\":\"s\"}", "missing_questions", "questions" },
+            { "{\"state\":\"s\",\"questions\":7}", "invalid_questions", "questions" },
+            { Builder(), "missing_questions", "questions" },
+            { Builder(Row("a", "noul"), Row("a", "noul")), "duplicate_question_id", "questions[1].id" },
+            { Builder(Row(" ", "noul")), "missing_question_id", "questions[0].id" },
+            { Builder(Row("a", "rank")), "invalid_question_type", "questions[0].type" },
+            { Builder(Row("a", "choice")), "missing_choice_options", "questions[0].options" },
             {
-                Builder(new JObject { ["id"] = "a", ["type"] = "choice", ["choiceOptions"] = new JArray(new JObject { ["key"] = "x" }, new JObject { ["key"] = "x" }) }),
-                "duplicate_choice_key", "definition.questions[0].choiceOptions[1].key"
+                Builder(new JObject { ["id"] = "a", ["type"] = "choice", ["options"] = new JArray(new JObject { ["key"] = "x" }) }),
+                "missing_choice_key", "questions[0].options[0].option"
             },
             {
-                Builder(new JObject { ["id"] = "a", ["type"] = "score", ["scoreLevels"] = new JArray("only one") }),
-                "invalid_score_levels", "definition.questions[0].scoreLevels"
+                Builder(new JObject { ["id"] = "a", ["type"] = "choice", ["options"] = new JArray("billing") }),
+                "invalid_choice_option", "questions[0].options[0]"
             },
             {
-                Builder(new JObject { ["id"] = "a", ["type"] = "score", ["scoreLevels"] = new JArray(Enumerable.Range(0, 11).Select(i => "L" + i)) }),
-                "invalid_score_levels", "definition.questions[0].scoreLevels"
+                Builder(new JObject { ["id"] = "a", ["type"] = "choice", ["options"] = new JArray(new JObject { ["option"] = "x" }, new JObject { ["option"] = "x", ["description"] = "again" }) }),
+                "duplicate_choice_key", "questions[0].options[1].option"
+            },
+            {
+                Builder(new JObject { ["id"] = "a", ["type"] = "score", ["levels"] = new JArray("only one") }),
+                "invalid_score_levels", "questions[0].levels"
+            },
+            {
+                Builder(new JObject { ["id"] = "a", ["type"] = "score", ["levels"] = new JArray(Enumerable.Range(0, 11).Select(i => "L" + i)) }),
+                "invalid_score_levels", "questions[0].levels"
             },
             {
                 Builder(new JObject { ["id"] = "a", ["type"] = "noul", ["instructions"] = 3 }),
-                "invalid_value", "definition.questions[0].instructions"
+                "invalid_value", "questions[0].instructions"
             },
-            { NativeJson(""), "missing_questions", "definition.questionsJson" },
-            { NativeJson("{not json"), "invalid_questions_json", "definition.questionsJson" },
-            { NativeJson("[]"), "invalid_questions_json", "definition.questionsJson" },
-            { NativeJson("{}"), "missing_questions", "definition.questionsJson" },
-            { NativeJson("{\"a\":{\"type\":\"choice\",\"criteria\":" + tooManyOptions.ToString() + "}}"), "too_many_choice_options", "definition.questionsJson['a'].criteria" },
-            { NativeJson("{\"a\":{\"type\":\"noul\",\"criteria\":{\"maybe\":\"x\"}}}"), "invalid_noul_criteria", "definition.questionsJson['a'].criteria.maybe" },
-            { NativeJson("{\"a\":{\"type\":\"noul\",\"instructions\":true}}"), "invalid_instructions", "definition.questionsJson['a'].instructions" },
-            { NativeJson("{\"a\":{\"type\":\"score\",\"criteria\":[\"x\",1]}}"), "invalid_criteria_description", "definition.questionsJson['a'].criteria[1]" },
-            { NativeJson("{\"a\":\"noul\"}"), "invalid_question", "definition.questionsJson['a']" }
+            { NativeJson(""), "missing_questions", "questions" },
+            { NativeJson("{not json"), "invalid_questions_json", "questions" },
+            { NativeJson("[]"), "missing_questions", "questions" },
+            { NativeJson("{}"), "missing_questions", "questions" },
+            { NativeJson("{\"a\":{\"type\":\"choice\",\"criteria\":" + tooManyOptions.ToString() + "}}"), "too_many_choice_options", "questions['a'].criteria" },
+            { NativeJson("{\"a\":{\"type\":\"noul\",\"criteria\":{\"maybe\":\"x\"}}}"), "invalid_noul_criteria", "questions['a'].criteria.maybe" },
+            { NativeJson("{\"a\":{\"type\":\"noul\",\"instructions\":true}}"), "invalid_instructions", "questions['a'].instructions" },
+            { NativeJson("{\"a\":{\"type\":\"score\",\"criteria\":[\"x\",1]}}"), "invalid_criteria_description", "questions['a'].criteria[1]" },
+            { NativeJson("{\"a\":\"noul\"}"), "invalid_question", "questions['a']" }
         };
     }
 
@@ -245,7 +278,7 @@ public class EvaluateTests
         var body = new JObject
         {
             ["state"] = "s",
-            ["definition"] = new JObject { ["mode"] = "JSON", ["questionsJson"] = new JObject { ["a"] = new JObject { ["type"] = "choice", ["criteria"] = criteria } }.ToString() }
+            ["questions"] = new JObject { ["a"] = new JObject { ["type"] = "choice", ["criteria"] = criteria } }
         };
 
         var (response, context) = await Harness.RunAsync("Evaluate", HttpMethod.Post, "/systemone", body.ToString(), Ok);
@@ -258,7 +291,7 @@ public class EvaluateTests
     public async Task Logs_do_not_contain_state_questions_or_api_key()
     {
         var (_, context) = await Harness.RunAsync("Evaluate", HttpMethod.Post, "/systemone", Harness.Fixture("builder-request.json"), Ok);
-        var (_, failed) = await Harness.RunAsync("Evaluate", HttpMethod.Post, "/systemone", "{\"state\":\"top secret state\",\"definition\":{\"mode\":\"JSON\",\"questionsJson\":\"{bad\"}}", Ok);
+        var (_, failed) = await Harness.RunAsync("Evaluate", HttpMethod.Post, "/systemone", "{\"state\":\"top secret state\",\"questions\":\"{bad\"}", Ok);
 
         var logs = string.Join("\n", context.CapturingLogger.Messages.Concat(failed.CapturingLogger.Messages));
         Assert.NotEmpty(context.CapturingLogger.Messages);

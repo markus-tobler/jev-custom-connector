@@ -98,13 +98,12 @@ public class Script : ScriptBase
         try
         {
             var body = await this.ReadJsonBodyAsync().ConfigureAwait(false);
-            var definition = body["definition"] ?? body;
-            schema = BuildResponseSchema(NormalizeQuestions(definition, "definition"));
+            schema = BuildResponseSchema(NormalizeQuestions(body["questions"], "questions"));
         }
         catch (ConnectorException ex)
         {
             // Design-time callers get a usable generic schema instead of a blocking error; the
-            // same definition is rejected with details when the action actually runs.
+            // same questions are rejected with details when the action actually runs.
             schema = BuildGenericResponseSchema(ex.Message);
         }
 
@@ -269,7 +268,7 @@ public class Script : ScriptBase
 
         var modelName = model != null && model.Type == JTokenType.String ? ((string)model).Trim() : null;
         payload["model"] = string.IsNullOrEmpty(modelName) ? DefaultModel : modelName;
-        payload["questions"] = NormalizeQuestions(body["definition"], "definition");
+        payload["questions"] = NormalizeQuestions(body["questions"], "questions");
         return payload;
     }
 
@@ -281,102 +280,79 @@ public class Script : ScriptBase
             throw new ConnectorException(HttpStatusCode.BadRequest, "missing_state", "The state to evaluate is required.", "state");
         }
 
-        var format = ReadOptionalString(body["stateFormat"], "stateFormat");
-        var isJson = string.Equals(format, "JSON", StringComparison.OrdinalIgnoreCase);
-        if (!isJson && !string.IsNullOrEmpty(format) && !string.Equals(format, "Text", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new ConnectorException(HttpStatusCode.BadRequest, "invalid_state_format", "The state format must be Text or JSON.", "stateFormat");
-        }
-
-        if (isJson && state.Type == JTokenType.String)
-        {
-            try
-            {
-                return ParseJson((string)state);
-            }
-            catch (JsonException)
-            {
-                throw new ConnectorException(HttpStatusCode.BadRequest, "invalid_state_json", "The state is not valid JSON.", "state");
-            }
-        }
-
         if (!IsEntryValue(state))
         {
             throw new ConnectorException(HttpStatusCode.BadRequest, "invalid_state", "The state must be text, a JSON object, a JSON array, or null.", "state");
         }
 
+        if (state.Type == JTokenType.String)
+        {
+            var structured = TryParseStructuredJson((string)state);
+            if (structured != null)
+            {
+                return structured;
+            }
+        }
+
         return state.DeepClone();
     }
 
-    internal static JObject NormalizeQuestions(JToken definition, string path)
+    // Text that is a complete JSON object or array is sent as structured JSON so questions can
+    // refer to its fields; anything else, including JSON scalars, stays plain text.
+    private static JToken TryParseStructuredJson(string text)
     {
-        var definitionObject = definition as JObject;
-        if (definitionObject == null)
+        var trimmed = text.Trim();
+        if (trimmed.Length < 2 || (trimmed[0] != '{' && trimmed[0] != '['))
         {
-            throw new ConnectorException(HttpStatusCode.BadRequest, "missing_definition", "The question definition is required.", path);
+            return null;
         }
 
-        var mode = ReadOptionalString(definitionObject["mode"], path + ".mode");
-        if (string.IsNullOrEmpty(mode))
-        {
-            var json = definitionObject["questionsJson"];
-            var hasJson = json != null && json.Type != JTokenType.Null;
-            mode = hasJson && definitionObject["questions"] == null ? "JSON" : "Builder";
-        }
-
-        if (string.Equals(mode, "JSON", StringComparison.OrdinalIgnoreCase))
-        {
-            return ValidateNativeQuestions(ReadQuestionsJson(definitionObject["questionsJson"], path + ".questionsJson"), path + ".questionsJson");
-        }
-
-        if (string.Equals(mode, "Builder", StringComparison.OrdinalIgnoreCase))
-        {
-            return ValidateNativeQuestions(BuildQuestionsFromRows(definitionObject["questions"], path + ".questions"), path + ".questions");
-        }
-
-        throw new ConnectorException(HttpStatusCode.BadRequest, "invalid_mode", "The definition mode must be Builder or JSON.", path + ".mode");
-    }
-
-    private static JObject ReadQuestionsJson(JToken token, string path)
-    {
-        if (token == null || token.Type == JTokenType.Null || (token.Type == JTokenType.String && string.IsNullOrWhiteSpace((string)token)))
-        {
-            throw new ConnectorException(HttpStatusCode.BadRequest, "missing_questions", "Questions JSON is required in JSON mode.", path);
-        }
-
-        if (token.Type == JTokenType.Object)
-        {
-            return (JObject)token;
-        }
-
-        if (token.Type != JTokenType.String)
-        {
-            throw new ConnectorException(HttpStatusCode.BadRequest, "invalid_questions_json", "Questions JSON must be a JSON object keyed by question ID.", path);
-        }
-
-        JToken parsed;
         try
         {
-            parsed = ParseJson((string)token);
+            var token = ParseJson(trimmed);
+            return token.Type == JTokenType.Object || token.Type == JTokenType.Array ? token : null;
         }
         catch (JsonException)
         {
-            throw new ConnectorException(HttpStatusCode.BadRequest, "invalid_questions_json", "Questions JSON is not valid JSON.", path);
+            return null;
         }
-
-        var questions = parsed as JObject;
-        if (questions == null)
-        {
-            throw new ConnectorException(HttpStatusCode.BadRequest, "invalid_questions_json", "Questions JSON must be a JSON object keyed by question ID.", path);
-        }
-
-        return questions;
     }
 
-    private static JObject BuildQuestionsFromRows(JToken token, string path)
+    internal static JObject NormalizeQuestions(JToken questions, string path)
     {
-        var rows = token as JArray;
-        if (rows == null || rows.Count == 0)
+        if (questions == null || questions.Type == JTokenType.Null || (questions.Type == JTokenType.String && string.IsNullOrWhiteSpace((string)questions)))
+        {
+            throw new ConnectorException(HttpStatusCode.BadRequest, "missing_questions", "Add at least one question.", path);
+        }
+
+        if (questions.Type == JTokenType.String)
+        {
+            try
+            {
+                questions = ParseJson((string)questions);
+            }
+            catch (JsonException)
+            {
+                throw new ConnectorException(HttpStatusCode.BadRequest, "invalid_questions_json", "The questions text is not valid JSON.", path);
+            }
+        }
+
+        if (questions.Type == JTokenType.Array)
+        {
+            return ValidateNativeQuestions(BuildQuestionsFromRows((JArray)questions, path), path);
+        }
+
+        if (questions.Type == JTokenType.Object)
+        {
+            return ValidateNativeQuestions((JObject)questions, path);
+        }
+
+        throw new ConnectorException(HttpStatusCode.BadRequest, "invalid_questions", "Questions must be a list of question rows or a TypeSafe questions object keyed by question ID.", path);
+    }
+
+    private static JObject BuildQuestionsFromRows(JArray rows, string path)
+    {
+        if (rows.Count == 0)
         {
             throw new ConnectorException(HttpStatusCode.BadRequest, "missing_questions", "Add at least one question.", path);
         }
@@ -427,10 +403,10 @@ public class Script : ScriptBase
 
                     break;
                 case "choice":
-                    question["criteria"] = BuildChoiceCriteria(row["choiceOptions"], rowPath + ".choiceOptions");
+                    question["criteria"] = BuildChoiceCriteria(row["options"], rowPath + ".options");
                     break;
                 case "score":
-                    question["criteria"] = BuildScoreCriteria(row["scoreLevels"], rowPath + ".scoreLevels");
+                    question["criteria"] = BuildScoreCriteria(row["levels"], rowPath + ".levels");
                     break;
                 default:
                     throw new ConnectorException(HttpStatusCode.BadRequest, "invalid_question_type", "The question type must be noul, choice, or score.", rowPath + ".type");
@@ -462,18 +438,19 @@ public class Script : ScriptBase
             var option = options[index] as JObject;
             if (option == null)
             {
-                throw new ConnectorException(HttpStatusCode.BadRequest, "invalid_choice_option", "Each choice option must be an object.", optionPath);
+                throw new ConnectorException(HttpStatusCode.BadRequest, "invalid_choice_option", "Each choice option must be an object with an option key and an optional description.", optionPath);
             }
 
-            var key = ReadOptionalString(option["key"], optionPath + ".key");
+            // The row property is "option", not "key": the Power Automate array editor hides item properties named "key".
+            var key = ReadOptionalString(option["option"], optionPath + ".option");
             if (string.IsNullOrWhiteSpace(key))
             {
-                throw new ConnectorException(HttpStatusCode.BadRequest, "missing_choice_key", "Each choice option needs a key.", optionPath + ".key");
+                throw new ConnectorException(HttpStatusCode.BadRequest, "missing_choice_key", "Each choice option needs a key.", optionPath + ".option");
             }
 
             if (criteria.Property(key) != null)
             {
-                throw new ConnectorException(HttpStatusCode.BadRequest, "duplicate_choice_key", "Choice option '" + key + "' is used more than once.", optionPath + ".key");
+                throw new ConnectorException(HttpStatusCode.BadRequest, "duplicate_choice_key", "Choice option '" + key + "' is used more than once.", optionPath + ".option");
             }
 
             var description = ReadOptionalString(option["description"], optionPath + ".description");
@@ -494,15 +471,7 @@ public class Script : ScriptBase
         var criteria = new JArray();
         for (var index = 0; index < levels.Count; index++)
         {
-            var level = levels[index];
-            var levelPath = path + "[" + index + "]";
-            if (level is JObject)
-            {
-                level = ((JObject)level)["description"];
-                levelPath += ".description";
-            }
-
-            var text = ReadOptionalString(level, levelPath);
+            var text = ReadOptionalString(levels[index], path + "[" + index + "]");
             criteria.Add(string.IsNullOrEmpty(text) ? JValue.CreateNull() : new JValue(text));
         }
 
@@ -643,7 +612,6 @@ public class Script : ScriptBase
         return BuildEnvelopeSchema(new JObject
         {
             ["type"] = "object",
-            ["x-ms-summary"] = "Answers",
             ["description"] = "Answers keyed by question ID.",
             ["properties"] = answers
         });
@@ -651,16 +619,19 @@ public class Script : ScriptBase
 
     internal static JObject BuildGenericResponseSchema(string reason)
     {
-        var description = "Answers keyed by question ID. Named outputs appear once the question definition is valid";
+        var description = "Answers keyed by question ID. Named outputs appear once the questions are valid";
         description += string.IsNullOrEmpty(reason) ? "." : ": " + reason;
         return BuildEnvelopeSchema(new JObject
         {
             ["type"] = "object",
-            ["x-ms-summary"] = "Answers",
             ["description"] = description
         });
     }
 
+    // The designer names each output token by joining the x-ms-summary of every enclosing object
+    // with the token's own summary. Containers therefore carry no summary (answers, usage) or only
+    // their own segment (question ID, probability, legend), and leaves carry only the last segment,
+    // which yields names such as "category probability billing" without repeated words.
     private static JObject BuildEnvelopeSchema(JObject answers)
     {
         return new JObject
@@ -670,7 +641,7 @@ public class Script : ScriptBase
             {
                 ["model"] = Property("string", "Model", "The model that answered the request."),
                 ["answers"] = answers,
-                ["usage"] = ObjectSchema("Usage", "Token usage for the request.", new JObject
+                ["usage"] = ObjectSchema(null, "Token usage for the request.", new JObject
                 {
                     ["input_tokens"] = Property("integer", "Input tokens", "Number of input tokens used."),
                     ["output_tokens"] = Property("integer", "Output tokens", "Number of output tokens used.")
@@ -684,24 +655,24 @@ public class Script : ScriptBase
         var type = (string)question["type"];
         var properties = new JObject
         {
-            ["type"] = Property("string", id + " type", "The answer type.")
+            ["type"] = Property("string", "type", "The answer type.")
         };
 
         if (type == "noul")
         {
-            properties["noul"] = Property("number", id + " yes probability", "Probability of a yes answer, from 0 to 1.");
+            properties["noul"] = Property("number", "yes probability", "Probability of a yes answer, from 0 to 1.");
         }
         else if (type == "choice")
         {
             var probabilities = new JObject();
             foreach (var option in ((JObject)question["criteria"]).Properties())
             {
-                probabilities[option.Name] = Property("number", id + " probability " + option.Name, "Probability of option " + option.Name + ".");
+                probabilities[option.Name] = Property("number", option.Name, "Probability of option " + option.Name + ".");
             }
 
-            properties["choice"] = Property("string", id + " choice", "The selected option key.");
-            properties["confidence"] = Property("number", id + " confidence", "Reported confidence in the selected option.");
-            properties["probabilities"] = ObjectSchema(id + " probabilities", "Probabilities keyed by option.", probabilities);
+            properties["choice"] = Property("string", "choice", "The selected option key.");
+            properties["confidence"] = Property("number", "confidence", "Reported confidence in the selected option.");
+            properties["probabilities"] = ObjectSchema("probability", "Probabilities keyed by option.", probabilities);
         }
         else
         {
@@ -713,7 +684,7 @@ public class Script : ScriptBase
                 var key = Convert.ToString(index);
                 var legendSchema = new JObject
                 {
-                    ["x-ms-summary"] = id + " legend " + key,
+                    ["x-ms-summary"] = key,
                     ["description"] = "Rubric description for score " + key + "."
                 };
                 if (criteria[index].Type == JTokenType.String)
@@ -722,13 +693,13 @@ public class Script : ScriptBase
                 }
 
                 legend[key] = legendSchema;
-                probabilities[key] = Property("number", id + " probability " + key, "Probability of score " + key + ".");
+                probabilities[key] = Property("number", key, "Probability of score " + key + ".");
             }
 
-            properties["score"] = Property("number", id + " score", "Expected score, which may fall between rubric levels.");
-            properties["confidence"] = Property("number", id + " confidence", "Reported confidence in the score.");
-            properties["legend"] = ObjectSchema(id + " legend", "Rubric descriptions keyed by score.", legend);
-            properties["probabilities"] = ObjectSchema(id + " probabilities", "Probabilities keyed by score.", probabilities);
+            properties["score"] = Property("number", "score", "Expected score, which may fall between rubric levels.");
+            properties["confidence"] = Property("number", "confidence", "Reported confidence in the score.");
+            properties["legend"] = ObjectSchema("legend", "Rubric descriptions keyed by score.", legend);
+            properties["probabilities"] = ObjectSchema("probability", "Probabilities keyed by score.", probabilities);
         }
 
         return ObjectSchema(id, "Answer for question " + id + ".", properties);
@@ -736,13 +707,15 @@ public class Script : ScriptBase
 
     private static JObject ObjectSchema(string summary, string description, JObject properties)
     {
-        return new JObject
+        var schema = new JObject { ["type"] = "object" };
+        if (summary != null)
         {
-            ["type"] = "object",
-            ["x-ms-summary"] = summary,
-            ["description"] = description,
-            ["properties"] = properties
-        };
+            schema["x-ms-summary"] = summary;
+        }
+
+        schema["description"] = description;
+        schema["properties"] = properties;
+        return schema;
     }
 
     private static JObject Property(string type, string summary, string description)

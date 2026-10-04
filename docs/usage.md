@@ -8,26 +8,30 @@ Add the **TypeSafe Jev v1** connector and enter your TypeSafe API key. You can e
 
 | Field | Notes |
 | --- | --- |
-| State | Text that Jev evaluates, such as an email, a ticket, or a transcript. |
-| State format | `Text` (default) sends the state as a string. `JSON` parses it first, so TypeSafe receives an object or array. Decimal values such as `12.50` are kept as written. |
+| State | Text that Jev evaluates, such as an email, a ticket, or a transcript. If the whole text is a JSON object or array, the connector sends it as structured JSON so questions can refer to its fields (for example `` `order.total` ``). Decimal values such as `12.50` are kept as written. Any other text, including JSON numbers, booleans, and strings, is sent as text. |
 | Model | Choose from the picker or enter a value. The default is `jev-latest`. Choose a pinned version, such as `jev-1.13.0`, if you need reproducible results. |
-| Definition mode | `Builder` (default) or `JSON`. |
+| Questions | One row per question (see below). |
 
-### Builder mode
+### Question rows
 
-Add one row for each question:
+Add one row for each question. The designer shows every field on every row; fill in only the fields for the row's type and leave the rest empty. In row JSON, a choice option's key is the `option` property, not `key`: the Power Automate array editor hides item properties named `key`.
 
 | Field | noul | choice | score |
 | --- | --- | --- | --- |
 | Question ID | required, unique | required, unique | required, unique |
 | Instructions | optional | optional | optional |
 | Noul: yes / no means | describes the true and false answers; leave a field blank to send `null` | – | – |
-| Choice options | – | 1–255 options with unique keys and optional descriptions | – |
+| Choice options | – | 1–255 options, each with a unique **Option key** and an optional **Option description** | – |
 | Score levels | – | – | 2–10 descriptions; level 0 comes first |
 
-### JSON mode
+### Passing questions from an expression
 
-Paste the `questions` object in TypeSafe's native format into **Questions JSON**. The connector validates it but forwards it unchanged, including any fields it does not recognize.
+Use **Switch to input entire array** on **Questions** to pass the questions from an expression or variable. The value can be:
+
+- an array of rows in the same shape as above, for example `[{"id":"is_urgent","type":"noul"},{"id":"category","type":"choice","options":[{"option":"billing","description":"Payments"},{"option":"other"}]}]`, or
+- the `questions` object in TypeSafe's native format. The connector validates it but forwards it unchanged, including any fields it does not recognize.
+
+Either value can also be JSON text.
 
 ```json
 {
@@ -36,6 +40,8 @@ Paste the `questions` object in TypeSafe's native format into **Questions JSON**
   "severity": { "type": "score", "criteria": ["No impact", "Minor", "Feature broken", "Outage"] }
 }
 ```
+
+The designer can't evaluate expressions, so with this input the action shows only the generic outputs (see below).
 
 ### Dynamic outputs in Power Automate
 
@@ -47,7 +53,7 @@ After you enter the questions, the designer calls `GetOutputSchema`, which is an
 | choice | `<id> choice`, `<id> confidence`, `<id> probability <option>` |
 | score | `<id> score` (expected value, can be fractional), `<id> confidence`, `<id> probability <n>`, `<id> legend <n>` |
 
-The tokens `Model`, `Input tokens`, and `Output tokens` are always available. If the definition is incomplete or invalid, the designer gets a generic schema in which **Answers** is a plain object. The action still runs, and the error is reported at run time.
+The tokens `Model`, `Input tokens`, and `Output tokens` are always available. If the questions are incomplete, invalid, or come from an expression, the designer gets a generic schema in which **Answers** is a plain object. The action still runs, and the error is reported at run time.
 
 Example condition: `@greater(body('Evaluate_with_Jev')?['answers']?['is_urgent']?['noul'], 0.8)`.
 
@@ -63,10 +69,10 @@ Set(
     ParseJSON(
         'TypeSafeJevv1'.EvaluateJson({
             state: txtMessage.Text,
-            definition: {
-                mode: "JSON",
-                questionsJson: "{""is_urgent"":{""type"":""noul"",""criteria"":{""true"":""Needs a reply today"",""false"":null}}}"
-            }
+            questions: Table(
+                { id: "is_urgent", type: "noul", noulTrue: "Needs a reply today" },
+                { id: "category", type: "choice", options: Table({ option: "billing", description: "Payments" }, { option: "other" }) }
+            )
         }).responseJson
     )
 );
@@ -84,14 +90,14 @@ Use `Text(jevResult.answers.category.choice)` for choice answers. In Power Apps,
 The connector returns validation errors as HTTP 400 with this body:
 
 ```json
-{ "error": { "code": "duplicate_question_id", "message": "...", "path": "definition.questions[1].id" } }
+{ "error": { "code": "duplicate_question_id", "message": "...", "path": "questions[1].id" } }
 ```
 
 Common codes:
 
-- `missing_state`, `invalid_state_json`, `missing_definition`, `invalid_mode`
-- `missing_questions`, `invalid_questions_json`, `missing_question_id`, `duplicate_question_id`, `invalid_question_type`
-- `invalid_noul_criteria`, `missing_choice_options`, `too_many_choice_options`, `duplicate_choice_key`, `invalid_score_levels`
+- `missing_state`, `invalid_state`, `invalid_model`
+- `missing_questions`, `invalid_questions`, `invalid_questions_json`, `missing_question_id`, `duplicate_question_id`, `invalid_question_type`
+- `invalid_noul_criteria`, `missing_choice_options`, `too_many_choice_options`, `missing_choice_key`, `duplicate_choice_key`, `invalid_score_levels`
 
 TypeSafe errors are passed through unchanged:
 

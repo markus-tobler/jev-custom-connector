@@ -77,11 +77,11 @@ Only HTTPS URLs are accepted. Authenticate first with `pac auth create --environ
 | Connection with a plain key and with a `Bearer `-prefixed key | Both connected, and both called TypeSafe successfully. |
 | Wrong key | TypeSafe's 401 `authentication_error` was passed through unchanged. |
 | `ListModels`, `GetModelChoices` (`/_connector/model-choices`) | 200 |
-| `GetOutputSchema`, using the full body or the `definition` only | 200 with identical schemas. Works even when the key is invalid, so no outbound call is made. |
-| `Evaluate` in Builder mode | 200. The live response matches the generated schema exactly. `x-typesafe-request-id` is returned. |
-| `Evaluate` in JSON mode with a JSON state | 200 |
+| `GetOutputSchema`, using the full body or the `questions` only | 200 with identical schemas. Works even when the key is invalid, so no outbound call is made. |
+| `Evaluate` with question rows | 200. The live response matches the generated schema exactly. `x-typesafe-request-id` is returned. |
+| `Evaluate` with native questions and a JSON state | 200 |
 | `EvaluateJson` | 200. `responseJson` parses. |
-| Invalid definition (duplicate question ID) | 400 `duplicate_question_id`. The schema endpoint falls back to the generic schema. |
+| Invalid questions (duplicate question ID) | 400 `duplicate_question_id`. The schema endpoint falls back to the generic schema. |
 | Power Automate flow: Button trigger, then Evaluate, then Compose of `answers.is_urgent.noul`, `category.choice`, `severity.score` | Run succeeded: `0.97`, `engineering`, `3.0` |
 
 To reproduce these checks:
@@ -94,6 +94,6 @@ To reproduce these checks:
 
 The designer resolves the dynamic schema client-side, so you need to check it in the browser:
 
-- [ ] In the Power Automate designer, add **Evaluate with Jev** in Builder mode with noul, choice, and score rows. Confirm that dynamic tokens appear for each question and option. This shows that the nested `body/definition` reference resolves for `x-ms-dynamic-properties`.
-- [ ] Switch to JSON mode and confirm the tokens refresh.
+- [ ] In the Power Automate designer, add **Evaluate with Jev** with noul, choice, and score rows. Confirm that dynamic tokens appear for each question and option. This shows that the `body/questions` reference resolves for `x-ms-dynamic-properties`. (An earlier version referenced the object `body/definition`, which the designer flattens into leaf parameters, so it failed with *Parameter "body/definition" cannot be found*.)
+- [ ] Switch **Questions** to the entire-array input and confirm the action falls back to the generic outputs.
 - [ ] Power Apps: call `EvaluateJson` and parse the result with `ParseJSON`.
