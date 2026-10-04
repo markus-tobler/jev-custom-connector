@@ -1,5 +1,9 @@
 # Development guide
 
+## Supported Power Platform surfaces
+
+For now, this connector supports use in **Power Automate**, **workflows**, and **Copilot Studio**. Canvas apps have not yet been tested and are not currently considered a supported surface.
+
 ## Prerequisites
 
 - PowerShell 7 (`pwsh`)
@@ -96,4 +100,6 @@ The designer resolves the dynamic schema client-side, so you need to check it in
 
 - [ ] In the Power Automate designer, add **Evaluate with Jev** with noul, choice, and score rows. Confirm that dynamic tokens appear for each question and option. This shows that the `body/questions` reference resolves for `x-ms-dynamic-properties`. (An earlier version referenced the object `body/definition`, which the designer flattens into leaf parameters, so it failed with *Parameter "body/definition" cannot be found*.)
 - [ ] Switch **Questions** to the entire-array input and confirm the action falls back to the generic outputs.
-- [ ] Power Apps: call `EvaluateJson` and parse the result with `ParseJSON`.
+- [ ] Copilot Studio: add the connector to a workflow, call `Evaluate`, and confirm the expected answers are available to subsequent steps.
+
+Canvas apps are intentionally excluded from the verification checklist because they have not yet been tested.

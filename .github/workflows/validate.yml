@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: validate-${{ github.ref }}
@@ -68,3 +68,23 @@ jobs:
           path: artifacts/*.zip
           if-no-files-found: error
           retention-days: 30
+
+      - name: Prepare versioned managed solution
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        shell: pwsh
+        run: |
+          $managed = Get-ChildItem ./artifacts -Filter '*_managed.zip' | Select-Object -First 1
+          if (-not $managed) { throw 'Managed solution zip not found in artifacts.' }
+          $name = "JevCustomConnector_${{ steps.version.outputs.value }}_managed.zip"
+          New-Item -ItemType Directory -Force release | Out-Null
+          Copy-Item $managed.FullName (Join-Path release $name)
+
+      - name: Create GitHub release
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ steps.version.outputs.value }}" release/*.zip \
+            --target "$GITHUB_SHA" \
+            --title "JevCustomConnector ${{ steps.version.outputs.value }}" \
+            --generate-notes
