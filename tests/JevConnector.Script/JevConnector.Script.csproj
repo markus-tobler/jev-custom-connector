@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <Compile Include="../../solutions/JevCustomConnector/src/Connectors/mto_jevv1connector_customcodeblobcontent.csx" Link="Script.csx.cs" />
+    <Compile Include="../Shared/ScriptBase.cs" Link="ScriptBase.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -45,7 +46,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.1.1" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
   </ItemGroup>
 

@@ -1,10 +1,10 @@
 {
   "name": "jev-custom-connector",
   "private": true,
-  "description": "Tooling for the TypeSafe Jev v1 Power Platform custom connector.",
+  "description": "Tooling for the TypeSafe Jev v1 and Microsoft-Decision-1 Power Platform custom connectors.",
   "license": "MIT",
   "scripts": {
-    "validate:openapi": "swagger-cli validate solutions/JevCustomConnector/src/Connectors/mto_jevv1connector_openapidefinition.json"
+    "validate:openapi": "swagger-cli validate solutions/JevCustomConnector/src/Connectors/mto_jevv1connector_openapidefinition.json && swagger-cli validate solutions/MicrosoftDecisionCustomConnector/src/Connectors/mto_msdecision1connector_openapidefinition.json"
   },
   "devDependencies": {
     "swagger-cli": "4.0.4"

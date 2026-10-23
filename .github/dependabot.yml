@@ -9,8 +9,13 @@ updates:
     directories:
       - /tests/JevConnector.Script
       - /tests/JevConnector.Tests
+      - /tests/MicrosoftDecisionConnector.Script
+      - /tests/MicrosoftDecisionConnector.Tests
     schedule:
       interval: weekly
+    ignore:
+      # Pinned to the version the Power Platform custom code runtime provides.
+      - dependency-name: Microsoft.Extensions.Logging.Abstractions
 
   - package-ecosystem: github-actions
     directory: /

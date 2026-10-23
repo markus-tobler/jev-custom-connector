@@ -1,0 +1,21 @@
+{
+  "state": "Hi team, the checkout page has been down since 9am and customers cannot pay.",
+  "model": "triage-decision",
+  "questions": {
+    "is_urgent": {
+      "type": "noul",
+      "instructions": "Does this message need an immediate response?",
+      "criteria": { "true": "Production impact or a hard deadline today.", "false": null }
+    },
+    "category": {
+      "type": "choice",
+      "instructions": "Which team should handle this?",
+      "criteria": { "billing": "Payments, invoices, refunds.", "engineering": "Outages and bugs.", "other": null }
+    },
+    "severity": {
+      "type": "score",
+      "instructions": "How severe is the reported problem?",
+      "criteria": [ "No impact", "Minor inconvenience", "Feature broken", "Revenue-impacting outage" ]
+    }
+  }
+}

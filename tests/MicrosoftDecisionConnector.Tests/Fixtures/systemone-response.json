@@ -1,0 +1,40 @@
+{
+  "model": "microsoft-decision-1",
+  "answers": {
+    "category": {
+      "choice": "engineering",
+      "confidence": 0.9849811277290135,
+      "probabilities": {
+        "billing": 0.007558647842145602,
+        "engineering": 0.9899874184860089,
+        "other": 0.0024539336718454358
+      },
+      "type": "choice"
+    },
+    "is_urgent": {
+      "noul": 0.9992903291345615,
+      "type": "noul"
+    },
+    "severity": {
+      "confidence": 0.9989242061009039,
+      "legend": {
+        "0": "No impact",
+        "1": "Minor inconvenience",
+        "2": "Feature broken",
+        "3": "Revenue-impacting outage"
+      },
+      "probabilities": {
+        "0": 0.00013972873559298023,
+        "1": 0.0001794152479430277,
+        "2": 0.0004877014407861199,
+        "3": 0.9991931545756779
+      },
+      "score": 2.998734281856549,
+      "type": "score"
+    }
+  },
+  "usage": {
+    "input_tokens": 131,
+    "output_tokens": 3
+  }
+}

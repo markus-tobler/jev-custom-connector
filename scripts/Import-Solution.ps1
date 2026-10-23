@@ -3,6 +3,8 @@ param(
     [Parameter(Mandatory)]
     [string]$Environment,
 
+    [string]$Solution,
+
     [string]$SolutionFile,
 
     [switch]$AllowUnmanaged,
@@ -15,7 +17,11 @@ $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "EnvironmentConfig.ps1")
 
 if ([string]::IsNullOrWhiteSpace($SolutionFile)) {
-    $SolutionFile = Join-Path $script:RepositoryRoot "artifacts/$($script:SolutionName)_managed.zip"
+    if ([string]::IsNullOrWhiteSpace($Solution)) {
+        throw "Pass -SolutionFile, or -Solution to import artifacts/<Solution>_managed.zip."
+    }
+    $solutionName = Resolve-SolutionNames -Solution $Solution
+    $SolutionFile = Join-Path $script:RepositoryRoot "artifacts/${solutionName}_managed.zip"
 }
 
 Assert-Command -Name "pac" -Description "The Power Platform CLI"

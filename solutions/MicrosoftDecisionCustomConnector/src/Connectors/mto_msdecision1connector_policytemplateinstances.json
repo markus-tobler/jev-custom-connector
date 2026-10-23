@@ -1,0 +1,19 @@
+[
+  {
+    "TemplateId": "dynamichosturl",
+    "Title": "Route to the Foundry resource endpoint",
+    "Parameters": {
+      "x-ms-apimTemplateParameter.urlTemplate": "@connectionParameters('endpoint')"
+    }
+  },
+  {
+    "TemplateId": "setheader",
+    "Title": "Pass the deployment name to custom code",
+    "Parameters": {
+      "x-ms-apimTemplateParameter.name": "x-connector-deployment",
+      "x-ms-apimTemplateParameter.value": "@connectionParameters('deployment')",
+      "x-ms-apimTemplateParameter.existsAction": "override",
+      "x-ms-apimTemplate-policySection": "Request"
+    }
+  }
+]

@@ -1,7 +1,36 @@
 $script:RepositoryRoot = Split-Path $PSScriptRoot -Parent
 $script:DefaultDotEnvPath = Join-Path $script:RepositoryRoot ".env"
-$script:SolutionName = "JevCustomConnector"
-$script:ConnectorName = "mto_jevv1connector"
+
+# Every solution in the repository, with its connector and the tests that cover its custom code.
+$script:Solutions = [ordered]@{
+    JevCustomConnector               = @{
+        ConnectorName = "mto_jevv1connector"
+        TestProject   = "tests/JevConnector.Tests/JevConnector.Tests.csproj"
+    }
+    MicrosoftDecisionCustomConnector = @{
+        ConnectorName = "mto_msdecision1connector"
+        TestProject   = "tests/MicrosoftDecisionConnector.Tests/MicrosoftDecisionConnector.Tests.csproj"
+    }
+}
+
+# Returns the requested solution names, or every solution when none is requested.
+function Resolve-SolutionNames {
+    [CmdletBinding()]
+    param(
+        [string[]]$Solution
+    )
+
+    if ($null -eq $Solution -or $Solution.Count -eq 0) {
+        return @($script:Solutions.Keys)
+    }
+
+    foreach ($name in $Solution) {
+        if (-not $script:Solutions.Contains($name)) {
+            throw "Unknown solution '$name'. Known solutions: $($script:Solutions.Keys -join ', ')."
+        }
+    }
+    return @($Solution)
+}
 
 function Import-DotEnv {
     [CmdletBinding()]
