@@ -89,6 +89,18 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  # Single stable check for the "Protect main" ruleset, independent of the matrix entries.
+  validate:
+    name: Validate, test, and package
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Require every solution build to succeed
+        run: test "${{ needs.build.result }}" = success
+
   release:
     name: Publish GitHub release
     needs: build
