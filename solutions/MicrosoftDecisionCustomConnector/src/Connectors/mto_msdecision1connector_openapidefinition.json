@@ -1,0 +1,275 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Microsoft-Decision-1",
+    "description": "Evaluate text or JSON against yes/no, choice, and score questions with the Microsoft-Decision-1 model deployed in Microsoft Foundry. Answers are exposed as named, typed outputs that the connector derives from your questions.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Microsoft-Decision-1 documentation",
+      "url": "https://learn.microsoft.com/azure/foundry/foundry-models/how-to/use-foundry-models-microsoft-decision"
+    }
+  },
+  "host": "services.ai.azure.com",
+  "basePath": "/providers/microsoft/v1",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/systemone": {
+      "post": {
+        "operationId": "Evaluate",
+        "summary": "Evaluate with Microsoft-Decision-1",
+        "description": "Sends a state and a set of questions to the Microsoft-Decision-1 deployment of the connection and returns typed answers. The output fields are generated from the questions.",
+        "x-ms-visibility": "important",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/EvaluateRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Answers keyed by question ID.",
+            "schema": {
+              "x-ms-dynamic-schema": {
+                "operationId": "GetOutputSchema",
+                "parameters": {
+                  "questions": {
+                    "parameter": "questions"
+                  }
+                },
+                "value-path": "schema"
+              },
+              "x-ms-dynamic-properties": {
+                "operationId": "GetOutputSchema",
+                "parameters": {
+                  "body/questions": {
+                    "parameterReference": "body/questions"
+                  }
+                },
+                "itemValuePath": "schema"
+              }
+            }
+          },
+          "default": {
+            "description": "The request failed. The body contains the Foundry or connector error."
+          }
+        }
+      }
+    },
+    "/_connector/evaluate-json": {
+      "post": {
+        "operationId": "EvaluateJson",
+        "summary": "Evaluate with Microsoft-Decision-1 (JSON text)",
+        "description": "Runs the same evaluation and returns the native decision response as JSON text. Use it when your flow parses the response itself.",
+        "x-ms-visibility": "advanced",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/EvaluateRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The native decision response serialized as JSON text.",
+            "schema": {
+              "$ref": "#/definitions/EvaluateJsonResponse"
+            }
+          },
+          "default": {
+            "description": "The request failed. The body contains the Foundry or connector error."
+          }
+        }
+      }
+    },
+    "/_connector/output-schema": {
+      "post": {
+        "operationId": "GetOutputSchema",
+        "summary": "Get output schema",
+        "description": "Builds the answer schema for a question definition inside the connector. No request is sent to Foundry.",
+        "x-ms-visibility": "internal",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OutputSchemaRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The generated JSON schema.",
+            "schema": {
+              "$ref": "#/definitions/OutputSchemaResponse"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "EvaluateRequest": {
+      "type": "object",
+      "required": [
+        "state",
+        "questions"
+      ],
+      "properties": {
+        "state": {
+          "type": "string",
+          "x-ms-summary": "State",
+          "description": "The text to evaluate. Text that is a JSON object or array is sent as structured JSON, so questions can refer to its fields.",
+          "x-ms-visibility": "important"
+        },
+        "questions": {
+          "type": "array",
+          "x-ms-summary": "Questions",
+          "description": "One row per question. Switch to the entire-array input to pass the rows, or a native questions object keyed by question ID, from an expression.",
+          "x-ms-visibility": "important",
+          "items": {
+            "$ref": "#/definitions/QuestionRow"
+          }
+        }
+      }
+    },
+    "QuestionRow": {
+      "type": "object",
+      "required": [
+        "id",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "x-ms-summary": "Question ID",
+          "description": "Unique key for the answer, for example is_urgent."
+        },
+        "type": {
+          "type": "string",
+          "x-ms-summary": "Question type",
+          "description": "noul answers yes or no with a probability, choice selects one option, and score rates against ordered levels. Fill in only the fields for the selected type.",
+          "enum": [
+            "noul",
+            "choice",
+            "score"
+          ],
+          "default": "noul"
+        },
+        "instructions": {
+          "type": "string",
+          "x-ms-summary": "Instructions",
+          "description": "The question to ask about the state."
+        },
+        "noulTrue": {
+          "type": "string",
+          "x-ms-summary": "Noul: yes means",
+          "description": "Noul only. Optional description of a yes answer."
+        },
+        "noulFalse": {
+          "type": "string",
+          "x-ms-summary": "Noul: no means",
+          "description": "Noul only. Optional description of a no answer."
+        },
+        "options": {
+          "type": "array",
+          "x-ms-summary": "Choice options",
+          "description": "Choice only. 2 to 255 options with unique keys.",
+          "items": {
+            "$ref": "#/definitions/ChoiceOption"
+          }
+        },
+        "levels": {
+          "type": "array",
+          "x-ms-summary": "Score levels",
+          "description": "Score only. 2 to 10 ordered level descriptions, starting with score 0.",
+          "items": {
+            "type": "string",
+            "x-ms-summary": "Level",
+            "description": "Description of this score level."
+          }
+        }
+      }
+    },
+    "ChoiceOption": {
+      "type": "object",
+      "required": [
+        "option"
+      ],
+      "properties": {
+        "option": {
+          "type": "string",
+          "x-ms-summary": "Option key",
+          "description": "The value returned when this option is chosen, for example billing."
+        },
+        "description": {
+          "type": "string",
+          "x-ms-summary": "Option description",
+          "description": "Optional description of when to choose this option."
+        }
+      }
+    },
+    "EvaluateJsonResponse": {
+      "type": "object",
+      "properties": {
+        "responseJson": {
+          "type": "string",
+          "x-ms-summary": "Response JSON",
+          "description": "The native decision response with model, answers, and usage, as JSON text."
+        }
+      }
+    },
+    "OutputSchemaRequest": {
+      "type": "object",
+      "properties": {
+        "questions": {
+          "type": "array",
+          "x-ms-summary": "Questions",
+          "items": {
+            "$ref": "#/definitions/QuestionRow"
+          }
+        }
+      }
+    },
+    "OutputSchemaResponse": {
+      "type": "object",
+      "properties": {
+        "schema": {
+          "type": "object",
+          "x-ms-summary": "Schema",
+          "description": "JSON schema of the evaluation response."
+        }
+      }
+    }
+  },
+  "parameters": {},
+  "responses": {},
+  "securityDefinitions": {
+    "api_key": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "api-key"
+    }
+  },
+  "security": [
+    {
+      "api_key": []
+    }
+  ],
+  "tags": []
+}

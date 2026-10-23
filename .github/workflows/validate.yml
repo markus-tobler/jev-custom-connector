@@ -16,11 +16,15 @@ concurrency:
 
 jobs:
   build:
-    name: Validate, test, and package
+    name: Validate, test, and package ${{ matrix.solution }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    outputs:
-      version: ${{ steps.version.outputs.value }}
+    strategy:
+      fail-fast: false
+      matrix:
+        solution:
+          - JevCustomConnector
+          - MicrosoftDecisionCustomConnector
 
     steps:
       - name: Check out source
@@ -47,13 +51,13 @@ jobs:
 
       - name: Validate solution source
         shell: pwsh
-        run: ./scripts/Validate-Solution.ps1 -SkipPack
+        run: ./scripts/Validate-Solution.ps1 -Solution '${{ matrix.solution }}' -SkipPack
 
       - name: Determine build version
         id: version
         shell: pwsh
         run: |
-          [xml]$manifest = Get-Content ./solutions/JevCustomConnector/src/Other/Solution.xml -Raw
+          [xml]$manifest = Get-Content './solutions/${{ matrix.solution }}/src/Other/Solution.xml' -Raw
           $sourceVersion = [version]$manifest.ImportExportXml.SolutionManifest.Version
           $buildVersion = "{0}.{1}.{2}.{3}" -f $sourceVersion.Major, $sourceVersion.Minor, ($sourceVersion.Build + [int]$env:GITHUB_RUN_NUMBER), $env:GITHUB_RUN_ATTEMPT
           "value=$buildVersion" >> $env:GITHUB_OUTPUT
@@ -61,15 +65,29 @@ jobs:
 
       - name: Build managed and unmanaged packages
         shell: pwsh
-        run: ./scripts/Build-Solution.ps1 -PackageType Both -Version '${{ steps.version.outputs.value }}'
+        run: ./scripts/Build-Solution.ps1 -Solution '${{ matrix.solution }}' -PackageType Both -Version '${{ steps.version.outputs.value }}'
 
       - name: Upload solution packages
         uses: actions/upload-artifact@v4
         with:
-          name: JevCustomConnector-${{ steps.version.outputs.value }}
+          name: ${{ matrix.solution }}-${{ steps.version.outputs.value }}
           path: artifacts/*.zip
           if-no-files-found: error
           retention-days: 30
+
+      - name: Prepare versioned managed solution
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force release | Out-Null
+          Copy-Item './artifacts/${{ matrix.solution }}_managed.zip' './release/${{ matrix.solution }}_${{ steps.version.outputs.value }}_managed.zip'
+
+      - name: Upload release package
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.solution }}
+          path: release/*.zip
+          if-no-files-found: error
+          retention-days: 7
 
   release:
     name: Publish GitHub release
@@ -81,27 +99,22 @@ jobs:
       contents: write
 
     steps:
-      - name: Download solution packages
+      - name: Download versioned managed solutions
         uses: actions/download-artifact@v4
         with:
-          name: JevCustomConnector-${{ needs.build.outputs.version }}
-          path: artifacts
+          pattern: release-*
+          merge-multiple: true
+          path: release
 
-      - name: Prepare versioned managed solution
-        shell: pwsh
-        run: |
-          $managed = Get-ChildItem ./artifacts -Filter '*_managed.zip' | Select-Object -First 1
-          if (-not $managed) { throw 'Managed solution zip not found in artifacts.' }
-          $name = "JevCustomConnector_${{ needs.build.outputs.version }}_managed.zip"
-          New-Item -ItemType Directory -Force release | Out-Null
-          Copy-Item $managed.FullName (Join-Path release $name)
-
+      # One release per build carries every connector's managed solution, so the latest release
+      # always offers the current version of each.
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "v${{ needs.build.outputs.version }}" release/*.zip \
+          tag="release-${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
+          gh release create "$tag" release/*.zip \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "JevCustomConnector ${{ needs.build.outputs.version }}" \
+            --title "Connectors build ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}" \
             --generate-notes

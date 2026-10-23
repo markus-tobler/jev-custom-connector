@@ -1,0 +1,41 @@
+{
+  "endpoint": {
+    "type": "string",
+    "uiDefinition": {
+      "displayName": "Foundry resource endpoint",
+      "description": "The endpoint of the Foundry resource that hosts the deployment, for example https://my-resource.services.ai.azure.com.",
+      "tooltip": "Copy the endpoint from the deployment details page in the Foundry portal. Only the scheme and host are used, so a target URI that includes a path also works.",
+      "constraints": {
+        "tabIndex": 1,
+        "clearText": true,
+        "required": "true"
+      }
+    }
+  },
+  "deployment": {
+    "type": "string",
+    "uiDefinition": {
+      "displayName": "Deployment name",
+      "description": "The name of your Microsoft-Decision-1 deployment, for example Decision-1.",
+      "tooltip": "The deployment name, not the model name. Create a separate connection to use another deployment.",
+      "constraints": {
+        "tabIndex": 2,
+        "clearText": true,
+        "required": "true"
+      }
+    }
+  },
+  "api_key": {
+    "type": "securestring",
+    "uiDefinition": {
+      "displayName": "API key",
+      "description": "An API key of the Foundry resource.",
+      "tooltip": "Copy Key 1 or Key 2 from the deployment details page or the resource's Keys and Endpoint page. The connector sends it in the api-key header.",
+      "constraints": {
+        "tabIndex": 3,
+        "clearText": false,
+        "required": "true"
+      }
+    }
+  }
+}

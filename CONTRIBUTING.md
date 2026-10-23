@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in improving the TypeSafe Jev custom connector. Bug reports, documentation fixes, and pull requests are welcome.
+Thanks for your interest in improving the TypeSafe Jev and Microsoft-Decision-1 custom connectors. Bug reports, documentation fixes, and pull requests are welcome.
 
 ## Reporting issues
 
@@ -14,6 +14,7 @@ See the [development guide](docs/development.md) for prerequisites, the source l
 npm ci
 cp .env.example .env   # only needed for importing into a DEV environment
 dotnet test tests/JevConnector.Tests
+dotnet test tests/MicrosoftDecisionConnector.Tests
 pwsh ./scripts/Validate-Solution.ps1
 ```
 

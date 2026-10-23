@@ -1,10 +1,19 @@
-# TypeSafe Jev custom connector
+# TypeSafe Jev and Microsoft-Decision-1 custom connectors
 
 **Fast AI decisions, directly in Power Automate and Copilot Studio.**
 
-This open-source custom connector brings [TypeSafe AI's Jev](https://typesafe.ai/) to Power Platform makers without writing API integration code. Evaluate a message, route a request, or score a case, then use the answers as named, strongly typed dynamic content in your automation.
+These open-source custom connectors bring [TypeSafe AI's Jev](https://typesafe.ai/) and [Microsoft-Decision-1 in Microsoft Foundry](https://learn.microsoft.com/azure/foundry/foundry-models/how-to/use-foundry-models-microsoft-decision) to Power Platform makers without writing API integration code. Evaluate a message, route a request, or score a case, then use the answers as named, strongly typed dynamic content in your automation.
 
-[Download the latest managed solution](https://github.com/markus-tobler/jev-custom-connector/releases/latest) · [Usage guide](docs/usage.md) · [Contribute](CONTRIBUTING.md)
+[Download the latest managed solutions](https://github.com/markus-tobler/jev-custom-connector/releases/latest) · [Jev usage guide](docs/usage.md) · [Microsoft-Decision-1 usage guide](docs/microsoft-decision-usage.md) · [Contribute](CONTRIBUTING.md)
+
+## Connectors
+
+Both models use the same question types and return the same typed answers, so both connectors offer the same actions and generated outputs. Each connector ships as its own managed solution; import only the one you need.
+
+| Connector | Model | Solution | Connection |
+| --- | --- | --- | --- |
+| **TypeSafe Jev v1** | Jev, hosted by TypeSafe AI | `JevCustomConnector` | TypeSafe API key; model selected per action |
+| **Microsoft-Decision-1** | Microsoft-Decision-1, deployed in your own Microsoft Foundry resource | `MicrosoftDecisionCustomConnector` | Foundry resource endpoint, deployment name, and API key |
 
 ## Why Jev?
 
@@ -46,6 +55,8 @@ See the [usage guide](docs/usage.md) for the complete example, including questio
 
 ## Get started
 
+### TypeSafe Jev
+
 1. Get a Jev API key from the [TypeSafe dashboard](https://console.typesafe.ai/keys).
 2. Open the repository's [Releases page](https://github.com/markus-tobler/jev-custom-connector/releases) and download the managed `JevCustomConnector` solution from the [latest release](https://github.com/markus-tobler/jev-custom-connector/releases/latest).
 3. Import the managed solution into your Power Platform environment.
@@ -55,17 +66,27 @@ See the [usage guide](docs/usage.md) for the complete example, including questio
 
 See the [usage guide](docs/usage.md) for a detailed Power Automate example, question types, input schemas, dynamic outputs, and error handling.
 
-See the [development guide](docs/development.md) to build, test, import, and maintain the connector.
+### Microsoft-Decision-1
+
+1. [Deploy Microsoft-Decision-1](https://learn.microsoft.com/azure/foundry/foundry-models/how-to/use-foundry-models-microsoft-decision#deploy-microsoft-decision-1) in a Microsoft Foundry resource, and copy the endpoint, deployment name, and API key from the deployment details page.
+2. Download the managed `MicrosoftDecisionCustomConnector` solution from the [latest release](https://github.com/markus-tobler/jev-custom-connector/releases/latest) and import it into your Power Platform environment.
+3. Create a connection for **Microsoft-Decision-1** with the endpoint, deployment name, and API key.
+4. Add **Evaluate with Microsoft-Decision-1** to a flow, provide the state to evaluate, and define one or more questions.
+5. Use the generated answer fields as dynamic content in later actions and conditions.
+
+See the [Microsoft-Decision-1 usage guide](docs/microsoft-decision-usage.md) for connection details, limits, and error handling.
+
+See the [development guide](docs/development.md) to build, test, import, and maintain the connectors.
 
 ## Use it, share feedback, or contribute
 
-Try the connector in your own workflows and help shape it. [Open an issue](https://github.com/markus-tobler/jev-custom-connector/issues) to report a bug or suggest an improvement. Documentation fixes and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+Try the connectors in your own workflows and help shape it. [Open an issue](https://github.com/markus-tobler/jev-custom-connector/issues) to report a bug or suggest an improvement. Documentation fixes and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
 
 To report a vulnerability, follow [SECURITY.md](SECURITY.md) instead of opening a public issue.
 
 ## Disclaimer
 
-This is an independent community project. It is not affiliated with, endorsed by, or supported by TypeSafe AI or Microsoft. TypeSafe, Jev, Microsoft, Power Platform, Power Automate, and Copilot Studio are trademarks of their respective owners. Use of the TypeSafe API is subject to TypeSafe's own terms.
+This is an independent community project. It is not affiliated with, endorsed by, or supported by TypeSafe AI or Microsoft. TypeSafe, Jev, Microsoft, Microsoft Foundry, Microsoft-Decision-1, Power Platform, Power Automate, and Copilot Studio are trademarks of their respective owners. Use of the TypeSafe API is subject to TypeSafe's own terms, and use of Microsoft Foundry is subject to Microsoft's terms for your Azure subscription.
 
 ## License
 

@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <Compile Include="../../solutions/JevCustomConnector/src/Connectors/mto_jevv1connector_customcodeblobcontent.csx" Link="Script.csx.cs" />
+    <Compile Include="../Shared/ScriptBase.cs" Link="ScriptBase.cs" />
   </ItemGroup>
 
   <ItemGroup>

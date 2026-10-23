@@ -8,7 +8,7 @@ This guide uses Power Automate for the examples. The same connector actions can 
 
 You need:
 
-- The **TypeSafe Jev v1** custom connector installed in your Power Platform environment. Download the managed solution from the repository's [Releases page](https://github.com/markus-tobler/jev-custom-connector/releases), then import it through Power Apps under **Solutions**.
+- The **TypeSafe Jev v1** custom connector installed in your Power Platform environment. Download the managed `JevCustomConnector` solution from the repository's [Releases page](https://github.com/markus-tobler/jev-custom-connector/releases), then import it through Power Apps under **Solutions**.
 - A TypeSafe account and API key. Sign in to the [TypeSafe dashboard](https://console.typesafe.ai/keys), create a key, and copy it while it is available.
 
 When Power Automate first asks for a connection, enter the API key in the **TypeSafe API key** field. Store and share the connection as you would any other credential-bearing Power Platform connection.

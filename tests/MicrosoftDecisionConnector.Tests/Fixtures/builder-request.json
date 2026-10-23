@@ -1,0 +1,28 @@
+{
+  "state": "Hi team, the checkout page has been down since 9am and customers cannot pay.",
+  "questions": [
+    {
+      "id": "is_urgent",
+      "type": "noul",
+      "instructions": "Does this message need an immediate response?",
+      "noulTrue": "Production impact or a hard deadline today.",
+      "noulFalse": ""
+    },
+    {
+      "id": "category",
+      "type": "choice",
+      "instructions": "Which team should handle this?",
+      "options": [
+        { "option": "billing", "description": "Payments, invoices, refunds." },
+        { "option": "engineering", "description": "Outages and bugs." },
+        { "option": "other" }
+      ]
+    },
+    {
+      "id": "severity",
+      "type": "score",
+      "instructions": "How severe is the reported problem?",
+      "levels": [ "No impact", "Minor inconvenience", "Feature broken", "Revenue-impacting outage" ]
+    }
+  ]
+}
