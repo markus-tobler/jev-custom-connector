@@ -28,15 +28,15 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -68,7 +68,7 @@ jobs:
         run: ./scripts/Build-Solution.ps1 -Solution '${{ matrix.solution }}' -PackageType Both -Version '${{ steps.version.outputs.value }}'
 
       - name: Upload solution packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.solution }}-${{ steps.version.outputs.value }}
           path: artifacts/*.zip
@@ -82,7 +82,7 @@ jobs:
           Copy-Item './artifacts/${{ matrix.solution }}_managed.zip' './release/${{ matrix.solution }}_${{ steps.version.outputs.value }}_managed.zip'
 
       - name: Upload release package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.solution }}
           path: release/*.zip
@@ -100,7 +100,7 @@ jobs:
 
     steps:
       - name: Download versioned managed solutions
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: release-*
           merge-multiple: true
