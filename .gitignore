@@ -10,3 +10,8 @@ TestResults/
 
 # Node tooling
 node_modules/
+
+# Python tooling
+__pycache__/
+.venv/
+.pytest_cache/

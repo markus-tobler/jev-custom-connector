@@ -89,17 +89,32 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  mcp:
+    name: Test Microsoft-Decision-1 MCP server
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.3.0
+
+      - name: Run tests
+        run: uv run --locked --directory mcp/microsoft-decision pytest
+
   # Single stable check for the "Protect main" ruleset, independent of the matrix entries.
   validate:
     name: Validate, test, and package
-    needs: build
+    needs: [build, mcp]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
-      - name: Require every solution build to succeed
-        run: test "${{ needs.build.result }}" = success
+      - name: Require every solution build and the MCP server tests to succeed
+        run: test "${{ needs.build.result }}" = success && test "${{ needs.mcp.result }}" = success
 
   release:
     name: Publish GitHub release

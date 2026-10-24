@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Only the [latest release](https://github.com/markus-tobler/jev-custom-connector/releases/latest) receives fixes.
+Only the [latest release](https://github.com/markus-tobler/model-one-connectors/releases/latest) receives fixes.
 
 ## Reporting a vulnerability
 

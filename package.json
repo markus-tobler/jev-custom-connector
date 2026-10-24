@@ -1,5 +1,5 @@
 {
-  "name": "jev-custom-connector",
+  "name": "model-one-connectors",
   "private": true,
   "description": "Tooling for the TypeSafe Jev v1 and Microsoft-Decision-1 Power Platform custom connectors.",
   "license": "MIT",
