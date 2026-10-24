@@ -10,7 +10,7 @@ This guide uses Power Automate for the examples. The same connector actions can 
 
 You need:
 
-- The **Microsoft-Decision-1** custom connector installed in your Power Platform environment. Download the managed `MicrosoftDecisionCustomConnector` solution from the repository's [Releases page](https://github.com/markus-tobler/jev-custom-connector/releases), then import it through Power Apps under **Solutions**.
+- The **Microsoft-Decision-1** custom connector installed in your Power Platform environment. Download the managed `MicrosoftDecisionCustomConnector` solution from the repository's [Releases page](https://github.com/markus-tobler/model-one-connectors/releases), then import it through Power Apps under **Solutions**.
 - A Microsoft Foundry resource with a Microsoft-Decision-1 deployment. Follow [Deploy Microsoft-Decision-1](https://learn.microsoft.com/azure/foundry/foundry-models/how-to/use-foundry-models-microsoft-decision#deploy-microsoft-decision-1) to create one.
 - From the deployment details page in the Foundry portal: the resource endpoint, the deployment name, and an API key.
 

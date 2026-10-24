@@ -21,3 +21,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+
+  - package-ecosystem: uv
+    directory: /mcp/microsoft-decision
+    schedule:
+      interval: weekly

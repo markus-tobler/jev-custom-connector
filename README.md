@@ -4,7 +4,7 @@
 
 These open-source custom connectors bring [TypeSafe AI's Jev](https://typesafe.ai/) and [Microsoft-Decision-1 in Microsoft Foundry](https://learn.microsoft.com/azure/foundry/foundry-models/how-to/use-foundry-models-microsoft-decision) to Power Platform makers without writing API integration code. Evaluate a message, route a request, or score a case, then use the answers as named, strongly typed dynamic content in your automation.
 
-[Download the latest managed solutions](https://github.com/markus-tobler/jev-custom-connector/releases/latest) · [Jev usage guide](docs/usage.md) · [Microsoft-Decision-1 usage guide](docs/microsoft-decision-usage.md) · [Contribute](CONTRIBUTING.md)
+[Download the latest managed solutions](https://github.com/markus-tobler/model-one-connectors/releases/latest) · [Jev usage guide](docs/usage.md) · [Microsoft-Decision-1 usage guide](docs/microsoft-decision-usage.md) · [Contribute](CONTRIBUTING.md)
 
 ## Connectors
 
@@ -58,7 +58,7 @@ See the [usage guide](docs/usage.md) for the complete example, including questio
 ### TypeSafe Jev
 
 1. Get a Jev API key from the [TypeSafe dashboard](https://console.typesafe.ai/keys).
-2. Open the repository's [Releases page](https://github.com/markus-tobler/jev-custom-connector/releases) and download the managed `JevCustomConnector` solution from the [latest release](https://github.com/markus-tobler/jev-custom-connector/releases/latest).
+2. Open the repository's [Releases page](https://github.com/markus-tobler/model-one-connectors/releases) and download the managed `JevCustomConnector` solution from the [latest release](https://github.com/markus-tobler/model-one-connectors/releases/latest).
 3. Import the managed solution into your Power Platform environment.
 4. Create a connection for **TypeSafe Jev v1** and enter the API key.
 5. Add **Evaluate with Jev** to a flow, provide the state to evaluate, and define one or more questions.
@@ -69,18 +69,28 @@ See the [usage guide](docs/usage.md) for a detailed Power Automate example, ques
 ### Microsoft-Decision-1
 
 1. [Deploy Microsoft-Decision-1](https://learn.microsoft.com/azure/foundry/foundry-models/how-to/use-foundry-models-microsoft-decision#deploy-microsoft-decision-1) in a Microsoft Foundry resource, and copy the endpoint, deployment name, and API key from the deployment details page.
-2. Download the managed `MicrosoftDecisionCustomConnector` solution from the [latest release](https://github.com/markus-tobler/jev-custom-connector/releases/latest) and import it into your Power Platform environment.
+2. Download the managed `MicrosoftDecisionCustomConnector` solution from the [latest release](https://github.com/markus-tobler/model-one-connectors/releases/latest) and import it into your Power Platform environment.
 3. Create a connection for **Microsoft-Decision-1** with the endpoint, deployment name, and API key.
 4. Add **Evaluate with Microsoft-Decision-1** to a flow, provide the state to evaluate, and define one or more questions.
 5. Use the generated answer fields as dynamic content in later actions and conditions.
 
 See the [Microsoft-Decision-1 usage guide](docs/microsoft-decision-usage.md) for connection details, limits, and error handling.
 
+### Microsoft-Decision-1 for local agents (MCP)
+
+The [Microsoft-Decision-1 MCP server](mcp/microsoft-decision/README.md) offers the same evaluation to local agents such as Claude Code. It requires [uv](https://docs.astral.sh/uv/) and runs with `uvx`:
+
+```bash
+claude mcp add microsoft-decision -- uvx --from "git+https://github.com/markus-tobler/model-one-connectors#subdirectory=mcp/microsoft-decision" microsoft-decision-mcp
+```
+
+It reads `MS_FOUNDRY_DECISION_1_ENDPOINT`, `MS_FOUNDRY_DECISION_1_DEPLOYMENT`, and `MS_FOUNDRY_DECISION_1_API_KEY` from the environment, then from `.env` in the working directory, then from `~/.env`, then from the OS credential store, which is the recommended place for the API key.
+
 See the [development guide](docs/development.md) to build, test, import, and maintain the connectors.
 
 ## Use it, share feedback, or contribute
 
-Try the connectors in your own workflows and help shape it. [Open an issue](https://github.com/markus-tobler/jev-custom-connector/issues) to report a bug or suggest an improvement. Documentation fixes and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+Try the connectors in your own workflows and help shape it. [Open an issue](https://github.com/markus-tobler/model-one-connectors/issues) to report a bug or suggest an improvement. Documentation fixes and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
 
 To report a vulnerability, follow [SECURITY.md](SECURITY.md) instead of opening a public issue.
 

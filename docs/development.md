@@ -41,11 +41,16 @@ The Microsoft-Decision-1 decision API accepts the same `state` and `questions` a
 - **Operations:** there is no models endpoint on the data plane, so `ListModels` and `GetModelChoices` do not exist.
 - **Limits:** a choice question needs 2-255 options. Jev accepts 1 option.
 
+### Microsoft-Decision-1 MCP server
+
+`mcp/microsoft-decision` is a Python stdio MCP server, built on the official `mcp` SDK (`MCPServer`), that calls the same decision API as the connector. It is not part of a solution and cannot reuse the `.csx`, so it repeats the connector's endpoint normalization (scheme, host, and port only) and validation limits. Its one tool, `evaluate`, takes the native `questions` object; the question-row format exists only for the Power Automate designer. Keep the limits in both places in sync. See its [README](../mcp/microsoft-decision/README.md) for configuration.
+
 ## Tests
 
 ```bash
 dotnet test tests/JevConnector.Tests
 dotnet test tests/MicrosoftDecisionConnector.Tests
+uv run --directory mcp/microsoft-decision pytest
 ```
 
 Each connector has a `*.Script` project that compiles the exact `.csx` against the shared `ScriptBase` stub in `tests/Shared` for `netstandard2.0`. Both scripts declare a class named `Script`, so each needs its own projects. Its global usings cover only the supported namespaces, so a reference to an unsupported API fails the build. The tests use a fake `IScriptContext` that records outbound requests. They cover:
@@ -93,6 +98,8 @@ Only HTTPS URLs are accepted. Authenticate first with `pac auth create --environ
 2. Runs validation and the tests for the solution.
 3. Stamps the solution version as `major.minor.(build + run number).attempt`, using the solution's own `Solution.xml`.
 4. Uploads the managed and unmanaged packages as an artifact.
+
+A separate `mcp` job runs the MCP server tests with uv. The `Validate, test, and package` check requires both jobs to succeed.
 
 On pushes to `main`, a separate `release` job publishes one GitHub release, tagged `release-<run number>.<attempt>`, with the versioned managed package of every solution. Only that job has write access to repository contents; pull request runs are read-only.
 
